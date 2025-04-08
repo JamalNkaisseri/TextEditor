@@ -1,100 +1,85 @@
-/* Apply base styling to the entire application */
+/* Base styling for the entire application */
 .root {
-    /* Set the background color for the entire application */
+    -fx-base: #2D2D2D;
     -fx-background-color: #2D2D2D;
-    /* Set the default font family */
-    -fx-font-family: "System";
+    -fx-text-fill: white;
 }
 
-/* Style the menu bar at the top of the application */
+/* Styling for menus */
 .menu-bar {
-    /* Dark grey background for the menu bar */
     -fx-background-color: #333333;
 }
 
-/* Style the text in menu titles (File, Edit, etc.) */
-.menu-bar .label {
-    /* White text for menu titles */
-    -fx-text-fill: #FFFFFF;
+.menu-bar > .container > .menu-button > .label {
+    -fx-text-fill: white;
 }
 
-/* Style individual menu items (New, Open, Save, etc.) */
 .menu-item {
-    /* Dark background for dropdown menu items */
     -fx-background-color: #333333;
 }
 
-/* Style the text in menu items */
-.menu-item .label {
-    /* White text for menu items */
-    -fx-text-fill: #FFFFFF;
+.menu-item > .label {
+    -fx-text-fill: white;
 }
 
-/* Hide the accelerator text (keyboard shortcuts) in menu items */
-.menu-item > .accelerator-text {
-    -fx-opacity: 0;
-}
-
-/* Style menu items when hovered with mouse */
 .menu-item:hover {
-    /* Lighter background when hovering for visual feedback */
-    -fx-background-color: #4D4D4D;
+    -fx-background-color: #444444;
 }
 
-/* Style menu items when selected/focused */
-.menu-item:focused {
-    /* Same color as hover for consistency */
-    -fx-background-color: #4D4D4D;
-}
-
-/* Style the dropdown menus (context menus) */
-.context-menu {
-    /* Dark background for dropdown menus */
-    -fx-background-color: #333333;
-}
-
-/* Style the main text editing area */
-.text-area {
-    /* Dark background for the text area container */
+/* RichTextFX CodeArea styling */
+.styled-text-area {
     -fx-background-color: #2D2D2D;
-    /* White text for readability */
-    -fx-text-fill: #FFFFFF;
+    -fx-background: #2D2D2D;
 }
 
-/* Style the content area inside the text area */
-.text-area .content {
-    /* Dark background for the actual editing area */
-    -fx-background-color: #2D2D2D;
+.styled-text-area .text {
+    -fx-fill: white;
 }
 
-/* Style scrollbars */
-.scroll-bar {
-    /* Dark background for scrollbars */
-    -fx-background-color: #2D2D2D;
+/* Current line highlight */
+.styled-text-area .paragraph-box:has-caret {
+    -fx-background-color: #323232;
 }
 
-/* Style the movable thumb part of scrollbars */
-.scroll-bar .thumb {
-    /* Medium grey for scrollbar thumb */
-    -fx-background-color: #555555;
+/* Selection styling */
+.styled-text-area .selection {
+    -fx-fill: #214283;
 }
 
-/* Style the scrollbar thumb when hovered */
-.scroll-bar .thumb:hover {
-    /* Lighter grey when hovering for visual feedback */
-    -fx-background-color: #666666;
+/* Line numbers styling */
+.lineno {
+    -fx-background-color: #3D3D3D;
+    -fx-text-fill: #888888;
 }
 
-/* Style the increment/decrement buttons on scrollbars */
-.scroll-bar .increment-button,
-.scroll-bar .decrement-button {
-    /* Dark grey for the arrow buttons */
-    -fx-background-color: #333333;
+/* Python syntax highlighting styles - using fx-fill instead of lookups */
+.styled-text-area .keyword {
+    -fx-fill: #CC7832;
+    -fx-font-weight: bold;
 }
 
-/* Style the arrows inside increment/decrement buttons */
-.scroll-bar .increment-arrow,
-.scroll-bar .decrement-arrow {
-    /* Light grey for the arrows */
-    -fx-background-color: #BBBBBB;
+.styled-text-area .function {
+    -fx-fill: #FFC66D;
+}
+
+.styled-text-area .class {
+    -fx-fill: #A9B7C6;
+    -fx-font-weight: bold;
+}
+
+.styled-text-area .string {
+    -fx-fill: #6A8759;
+}
+
+.styled-text-area .comment {
+    -fx-fill: #808080;
+    -fx-font-style: italic;
+}
+
+.styled-text-area .decorator {
+    -fx-fill: #BBB529;
+}
+
+.styled-text-area .number {
+    -fx-fill: #6897BB;
 }
