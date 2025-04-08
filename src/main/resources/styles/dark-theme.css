@@ -1,0 +1,100 @@
+/* Apply base styling to the entire application */
+.root {
+    /* Set the background color for the entire application */
+    -fx-background-color: #2D2D2D;
+    /* Set the default font family */
+    -fx-font-family: "System";
+}
+
+/* Style the menu bar at the top of the application */
+.menu-bar {
+    /* Dark grey background for the menu bar */
+    -fx-background-color: #333333;
+}
+
+/* Style the text in menu titles (File, Edit, etc.) */
+.menu-bar .label {
+    /* White text for menu titles */
+    -fx-text-fill: #FFFFFF;
+}
+
+/* Style individual menu items (New, Open, Save, etc.) */
+.menu-item {
+    /* Dark background for dropdown menu items */
+    -fx-background-color: #333333;
+}
+
+/* Style the text in menu items */
+.menu-item .label {
+    /* White text for menu items */
+    -fx-text-fill: #FFFFFF;
+}
+
+/* Hide the accelerator text (keyboard shortcuts) in menu items */
+.menu-item > .accelerator-text {
+    -fx-opacity: 0;
+}
+
+/* Style menu items when hovered with mouse */
+.menu-item:hover {
+    /* Lighter background when hovering for visual feedback */
+    -fx-background-color: #4D4D4D;
+}
+
+/* Style menu items when selected/focused */
+.menu-item:focused {
+    /* Same color as hover for consistency */
+    -fx-background-color: #4D4D4D;
+}
+
+/* Style the dropdown menus (context menus) */
+.context-menu {
+    /* Dark background for dropdown menus */
+    -fx-background-color: #333333;
+}
+
+/* Style the main text editing area */
+.text-area {
+    /* Dark background for the text area container */
+    -fx-background-color: #2D2D2D;
+    /* White text for readability */
+    -fx-text-fill: #FFFFFF;
+}
+
+/* Style the content area inside the text area */
+.text-area .content {
+    /* Dark background for the actual editing area */
+    -fx-background-color: #2D2D2D;
+}
+
+/* Style scrollbars */
+.scroll-bar {
+    /* Dark background for scrollbars */
+    -fx-background-color: #2D2D2D;
+}
+
+/* Style the movable thumb part of scrollbars */
+.scroll-bar .thumb {
+    /* Medium grey for scrollbar thumb */
+    -fx-background-color: #555555;
+}
+
+/* Style the scrollbar thumb when hovered */
+.scroll-bar .thumb:hover {
+    /* Lighter grey when hovering for visual feedback */
+    -fx-background-color: #666666;
+}
+
+/* Style the increment/decrement buttons on scrollbars */
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    /* Dark grey for the arrow buttons */
+    -fx-background-color: #333333;
+}
+
+/* Style the arrows inside increment/decrement buttons */
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    /* Light grey for the arrows */
+    -fx-background-color: #BBBBBB;
+}
