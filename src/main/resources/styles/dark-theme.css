@@ -83,3 +83,25 @@
 .styled-text-area .number {
     -fx-fill: #6897BB;
 }
+
+.always-visible-scrollbars .scroll-bar:vertical {
+    -fx-background-color: #2D2D2D;
+    -fx-opacity: 1.0;
+    -fx-pref-width: 16; /* Make it slightly wider for better visibility */
+    -fx-background-insets: 0;
+}
+
+.always-visible-scrollbars .scroll-bar:vertical .thumb {
+    -fx-background-color: #666666; /* Darker for better visibility */
+    -fx-background-radius: 8;
+    -fx-opacity: 0.8;
+}
+
+.always-visible-scrollbars .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #888888;
+    -fx-opacity: 1.0;
+}
+
+.always-visible-scrollbars .scroll-bar:vertical .track {
+    -fx-background-color: #3A3A3A;
+}
