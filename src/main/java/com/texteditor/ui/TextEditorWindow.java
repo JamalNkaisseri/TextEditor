@@ -1,8 +1,11 @@
 package com.texteditor.ui;
 
 import com.texteditor.io.FileHandler;
+import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -10,6 +13,9 @@ import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.File;
+
+import static javafx.application.Application.STYLESHEET_MODENA;
+import static javafx.application.Application.setUserAgentStylesheet;
 
 /**
  * Main window class for the text editor application.
@@ -23,13 +29,17 @@ public class TextEditorWindow {
     // Color constants for the dark theme - defined as class constants for easy modification
     private static final String BACKGROUND_COLOR = "#2D2D2D";  // Dark grey for background
     private static final String TEXT_COLOR = "#FFFFFF";        // White for text
-    private static final String MENU_BACKGROUND = "#333333";   // Slightly lighter grey for menus
 
     /**
      * Initializes and displays the text editor window
      * @param stage The primary stage (window) for the application
      */
     public void start(Stage stage) {
+        // Add this to your start() method before creating the scene
+        Platform.setImplicitExit(true);
+        setUserAgentStylesheet(STYLESHEET_MODENA); // Force load it once
+        setUserAgentStylesheet(null); // Then disable it
+
         // Create the main code area for document editing with syntax highlighting
         codeArea = new CodeArea();
 
@@ -50,17 +60,14 @@ public class TextEditorWindow {
                         "-fx-font-size: 14px;"
         );
 
-        // Create the menu bar with File and Edit menus
-        MenuBar menuBar = createMenuBar(stage);
-
-        // Set the menu bar at the top of the BorderPane
-        root.setTop(menuBar);
-
         // Set the code area in the center region (will expand to fill available space)
         root.setCenter(codeArea);
 
         // Create a scene with the root pane and set dimensions (800x600 pixels)
         Scene scene = new Scene(root, 800, 600);
+
+        // Set up keyboard shortcuts directly on the scene
+        setupKeyboardShortcuts(scene, stage);
 
         // Apply CSS styles from external file to the entire scene
         scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm());
@@ -79,23 +86,22 @@ public class TextEditorWindow {
     }
 
     /**
-     * Creates and configures the menu bar with File and Edit menus
+     * Sets up keyboard shortcuts for common operations
+     * @param scene The scene to which shortcuts will be added
      * @param stage Reference to the main stage for dialogs
-     * @return A configured MenuBar with all menu items
      */
-    private MenuBar createMenuBar(Stage stage) {
-        // Create the main menu bar
-        MenuBar menuBar = new MenuBar();
+    private void setupKeyboardShortcuts(Scene scene, Stage stage) {
+        // Create key combinations
+        KeyCombination keyCombNew = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombOpen = new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombSave = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombCut = new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombCopy = new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombPaste = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombExit = new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN);
 
-        // Apply dark theme styling to the menu bar
-        menuBar.setStyle("-fx-background-color: " + MENU_BACKGROUND + ";");
-
-        // Create the File menu
-        Menu fileMenu = new Menu("File");
-
-        // Create "New" menu item to start a new document
-        MenuItem newItem = new MenuItem("New");
-        newItem.setOnAction(e -> {
+        // Add the keyboard shortcuts to the scene
+        scene.getAccelerators().put(keyCombNew, () -> {
             // Clear the code area
             codeArea.clear();
             // Reset the file name to default
@@ -104,9 +110,7 @@ public class TextEditorWindow {
             stage.setTitle(fileName);
         });
 
-        // Create "Open" menu item to open existing files
-        MenuItem openItem = new MenuItem("Open");
-        openItem.setOnAction(e -> {
+        scene.getAccelerators().put(keyCombOpen, () -> {
             // Create a file chooser dialog for opening files
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Open File");
@@ -133,9 +137,7 @@ public class TextEditorWindow {
             }
         });
 
-        // Create "Save" menu item to save the current document
-        MenuItem saveItem = new MenuItem("Save");
-        saveItem.setOnAction(e -> {
+        scene.getAccelerators().put(keyCombSave, () -> {
             // Create a file chooser dialog for saving files
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save File");
@@ -161,48 +163,12 @@ public class TextEditorWindow {
             }
         });
 
-        // Create "Exit" menu item to close the application
-        MenuItem exitItem = new MenuItem("Exit");
-        exitItem.setOnAction(e -> stage.close());  // Simply close the window when clicked
+        // Add clipboard operations
+        scene.getAccelerators().put(keyCombCut, () -> codeArea.cut());
+        scene.getAccelerators().put(keyCombCopy, () -> codeArea.copy());
+        scene.getAccelerators().put(keyCombPaste, () -> codeArea.paste());
 
-        // Create the Edit menu for text manipulation operations
-        Menu editMenu = new Menu("Edit");
-
-        // Create "Cut" menu item
-        MenuItem cutItem = new MenuItem("Cut");
-        // Use the built-in cut functionality
-        cutItem.setOnAction(e -> codeArea.cut());
-
-        // Create "Copy" menu item
-        MenuItem copyItem = new MenuItem("Copy");
-        // Use the built-in copy functionality
-        copyItem.setOnAction(e -> codeArea.copy());
-
-        // Create "Paste" menu item
-        MenuItem pasteItem = new MenuItem("Paste");
-        // Use the built-in paste functionality
-        pasteItem.setOnAction(e -> codeArea.paste());
-
-        // Add keyboard shortcuts (accelerators) for common operations
-        // This allows users to use familiar key combinations like Ctrl+S to save
-        cutItem.setAccelerator(javafx.scene.input.KeyCombination.keyCombination("Ctrl+X"));
-        copyItem.setAccelerator(javafx.scene.input.KeyCombination.keyCombination("Ctrl+C"));
-        pasteItem.setAccelerator(javafx.scene.input.KeyCombination.keyCombination("Ctrl+V"));
-        saveItem.setAccelerator(javafx.scene.input.KeyCombination.keyCombination("Ctrl+S"));
-        openItem.setAccelerator(javafx.scene.input.KeyCombination.keyCombination("Ctrl+O"));
-        newItem.setAccelerator(javafx.scene.input.KeyCombination.keyCombination("Ctrl+N"));
-
-        // Add all items to the File menu
-        // SeparatorMenuItem adds a visual line separator between menu items
-        fileMenu.getItems().addAll(newItem, openItem, saveItem, new SeparatorMenuItem(), exitItem);
-
-        // Add all items to the Edit menu
-        editMenu.getItems().addAll(cutItem, copyItem, pasteItem);
-
-        // Add both menus to the menu bar
-        menuBar.getMenus().addAll(fileMenu, editMenu);
-
-        // Return the fully configured menu bar
-        return menuBar;
+        // Add exit shortcut (Ctrl+Q)
+        scene.getAccelerators().put(keyCombExit, () -> stage.close());
     }
 }
