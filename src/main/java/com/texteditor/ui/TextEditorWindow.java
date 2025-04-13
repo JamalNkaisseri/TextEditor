@@ -3,6 +3,7 @@ package com.texteditor.ui;
 import com.texteditor.io.FileHandler;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
@@ -13,6 +14,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.flowless.VirtualizedScrollPane;
 
 import java.io.File;
 import java.util.HashMap;
@@ -31,7 +33,9 @@ public class TextEditorWindow {
     private static final String TEXT_COLOR = "#FFFFFF";               // White for text
     private static final String TAB_SELECTED_COLOR = "#5A5A5A";       // Lighter grey for selected tab
     private static final String TAB_UNSELECTED_COLOR = "#333333";     // Medium grey for unselected tabs
-    private static final String TAB_HEADER_COLOR = "#1A1A1A";         // Very dark grey for tab header area
+    private static final String TAB_HEADER_COLOR = "#2D2D2D";         // Very dark grey for tab header area
+    private static final String SCROLLBAR_THUMB_COLOR = "#666666";    // Grey for scrollbar thumb
+    private static final String SCROLLBAR_TRACK_COLOR = "#3A3A3A";    // Darker grey for scrollbar track
 
     private TabPane tabPane;  // TabPane to hold multiple document tabs
     private int untitledCount = 1;  // Counter for untitled documents
@@ -62,13 +66,64 @@ public class TextEditorWindow {
         // Set up keyboard shortcuts
         setupKeyboardShortcuts(scene, stage);
 
-        // Apply CSS styles from external file
-        scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm());
+        // Apply CSS styles with custom scrollbar styling
+        String customStyles =
+                // Basic scrollbar styling for the CodeArea
+                ".virtual-flow .scroll-bar:vertical {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "    -fx-opacity: 1.0;" +
+                        "    -fx-pref-width: 12px;" +
+                        "}" +
+                        ".virtual-flow .scroll-bar:vertical .thumb {" +
+                        "    -fx-background-color: " + SCROLLBAR_THUMB_COLOR + ";" +
+                        "    -fx-background-radius: 6px;" +
+                        "    -fx-opacity: 0.8;" +
+                        "}" +
+                        ".virtual-flow .scroll-bar:vertical .thumb:hover {" +
+                        "    -fx-background-color: #888888;" +
+                        "    -fx-opacity: 1.0;" +
+                        "}" +
+                        ".virtual-flow .scroll-bar:vertical .track {" +
+                        "    -fx-background-color: " + SCROLLBAR_TRACK_COLOR + ";" +
+                        "    -fx-background-radius: 0;" +
+                        "}" +
+                        // Hide increment and decrement buttons for a cleaner look
+                        ".virtual-flow .scroll-bar:vertical .increment-button," +
+                        ".virtual-flow .scroll-bar:vertical .decrement-button {" +
+                        "    -fx-opacity: 0;" +
+                        "    -fx-pref-height: 0;" +
+                        "    -fx-min-height: 0;" +
+                        "    -fx-max-height: 0;" +
+                        "}" +
+                        // Hide the arrow icons
+                        ".virtual-flow .scroll-bar:vertical .increment-arrow," +
+                        ".virtual-flow .scroll-bar:vertical .decrement-arrow {" +
+                        "    -fx-opacity: 0;" +
+                        "    -fx-pref-height: 0;" +
+                        "    -fx-min-height: 0;" +
+                        "    -fx-max-height: 0;" +
+                        "}" +
+                        // Line numbers styling
+                        ".lineno {" +
+                        "    -fx-background-color: #3D3D3D;" +
+                        "    -fx-text-fill: #888888;" +
+                        "}" +
+                        // Selection styling
+                        ".styled-text-area .selection {" +
+                        "    -fx-fill: #214283;" +
+                        "}" +
+                        // Base colors for the code area
+                        ".styled-text-area {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "}" +
+                        ".styled-text-area .text {" +
+                        "    -fx-fill: " + TEXT_COLOR + ";" +
+                        "}";
 
-        // Custom tab styling to match the screenshot with removed blue focus indicator
+        // Custom tab styling
         String customTabStyle =
                 ".tab-pane .tab-header-area .tab-header-background {" +
-                        "    -fx-background-color: " + TAB_HEADER_COLOR + ";" + // Very dark header area
+                        "    -fx-background-color: " + TAB_HEADER_COLOR + ";" +
                         "    -fx-border-width: 0 0 1 0;" +
                         "    -fx-border-color: #555555;" +
                         "}" +
@@ -109,17 +164,18 @@ public class TextEditorWindow {
                         "    -fx-scale-shape: false;" +
                         "}";
 
+        // Add both styles to the scene
+        scene.getStylesheets().add("data:text/css," + customStyles.replace(" ", "%20"));
         scene.getStylesheets().add("data:text/css," + customTabStyle.replace(" ", "%20"));
 
         // Create initial tabs with empty content
-        createNewTab("Untitled 1");
-        createNewTab("Untitled 2");
+        createNewTab("Untitled");
 
         // Select the first tab
         tabPane.getSelectionModel().select(0);
 
         // Set the window title
-        stage.setTitle("Yoru1chi"); // Set editor name
+        stage.setTitle("Tricky Teta"); // Updated name to reflect purpose
         stage.setScene(scene);
         stage.show();
     }
@@ -129,9 +185,9 @@ public class TextEditorWindow {
      */
     private class EditorTab {
         private CodeArea codeArea;
+        private VirtualizedScrollPane<CodeArea> scrollPane;
         private String fileName;
         private File file;
-        private PythonSyntaxHighlighter highlighter;
 
         public EditorTab(String fileName) {
             this.fileName = fileName;
@@ -139,9 +195,6 @@ public class TextEditorWindow {
 
             // Create the code area
             codeArea = new CodeArea();
-
-            // Add style class for scrollbars
-            codeArea.getStyleClass().add("always-visible-scrollbars");
 
             // Add line numbers
             codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
@@ -154,12 +207,15 @@ public class TextEditorWindow {
                             "-fx-text-fill: " + TEXT_COLOR + ";"
             );
 
-            // Enable vertical scrolling and disable word wrap
-            codeArea.setWrapText(false);
+            // Enable word wrap for note-taking
+            codeArea.setWrapText(true);
 
-            // Apply syntax highlighting
-            highlighter = new PythonSyntaxHighlighter();
-            highlighter.applyHighlighting(codeArea);
+            // Create a virtualized scroll pane that properly handles scrolling
+            scrollPane = new VirtualizedScrollPane<>(codeArea);
+        }
+
+        public VirtualizedScrollPane<CodeArea> getScrollPane() {
+            return scrollPane;
         }
 
         public CodeArea getCodeArea() {
@@ -200,7 +256,7 @@ public class TextEditorWindow {
 
         // Create a tab
         Tab tab = new Tab(fileName);
-        tab.setContent(editorTab.getCodeArea());
+        tab.setContent(editorTab.getScrollPane()); // Use the scroll pane instead of direct CodeArea
 
         // Store tab data
         tabContents.put(tab, editorTab);
@@ -225,9 +281,9 @@ public class TextEditorWindow {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open File");
 
-        // Add filters
+        // Add filters for text files only
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Python Files", "*.py"),
+                new FileChooser.ExtensionFilter("Text Files", "*.txt"),
                 new FileChooser.ExtensionFilter("All Files", "*.*")
         );
 
@@ -270,7 +326,6 @@ public class TextEditorWindow {
 
                 // Add filters
                 fileChooser.getExtensionFilters().addAll(
-                        new FileChooser.ExtensionFilter("Python Files", "*.py"),
                         new FileChooser.ExtensionFilter("Text Files", "*.txt"),
                         new FileChooser.ExtensionFilter("All Files", "*.*")
                 );
