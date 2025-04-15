@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>MyTextEditor</artifactId>
+    <artifactId>TrickyTeta</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -61,6 +61,28 @@
                 <configuration>
                     <mainClass>com.texteditor.Main</mainClass>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.texteditor.Main</mainClass>
+                                </transformer>
+                            </transformers>
+                            <finalName>TrickyTeta</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
