@@ -2,8 +2,9 @@ package com.texteditor.ui;
 
 import com.texteditor.io.FileHandler;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
@@ -17,6 +18,7 @@ import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,10 +38,13 @@ public class TextEditorWindow {
     private static final String TAB_HEADER_COLOR = "#2D2D2D";         // Very dark grey for tab header area
     private static final String SCROLLBAR_THUMB_COLOR = "#666666";    // Grey for scrollbar thumb
     private static final String SCROLLBAR_TRACK_COLOR = "#3A3A3A";    // Darker grey for scrollbar track
+    private static final String CURSOR_COLOR = "#FFA500";             // Orange for cursor
+    private static final String CURRENT_LINE_COLOR = "#383838";       // Slightly lighter than background for current line
 
     private TabPane tabPane;  // TabPane to hold multiple document tabs
     private int untitledCount = 1;  // Counter for untitled documents
     private Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
+    private Label statusLabel;  // Status bar to display cursor position
 
     /**
      * Initializes and displays the text editor window
@@ -56,9 +61,18 @@ public class TextEditorWindow {
         tabPane.setStyle("-fx-background-color: " + BACKGROUND_COLOR + ";");
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
 
+        // Set up tab selection handler to focus the editor when tab is selected
+        setupTabSelectionHandler();
+
+        // Create status bar for cursor position
+        statusLabel = new Label("Line: 1, Column: 1");
+        statusLabel.setPadding(new Insets(3, 10, 3, 10));
+        statusLabel.setStyle("-fx-background-color: #333333; -fx-text-fill: #BBBBBB;");
+
         // Create the root layout container
         BorderPane root = new BorderPane();
         root.setCenter(tabPane);
+        root.setBottom(statusLabel);
 
         // Create a scene with the root pane
         Scene scene = new Scene(root, 800, 600);
@@ -67,6 +81,60 @@ public class TextEditorWindow {
         setupKeyboardShortcuts(scene, stage);
 
         // Apply CSS styles with custom scrollbar styling
+        applyCustomStyles(scene);
+
+        // Create initial tabs with empty content
+        createNewTab("Untitled");
+
+        // Select the first tab
+        tabPane.getSelectionModel().select(0);
+
+        // Focus the code area in the first tab
+        Platform.runLater(() -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().requestFocus();
+            }
+        });
+
+        // Set the window title
+        stage.setTitle("Tricky Teta"); // Updated name to reflect purpose
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    /**
+     * Set up a listener to focus the editor when a tab is selected
+     */
+    private void setupTabSelectionHandler() {
+        tabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
+            if (newTab != null) {
+                EditorTab editorTab = tabContents.get(newTab);
+                if (editorTab != null) {
+                    // Request focus on the code area when tab is selected
+                    Platform.runLater(() -> editorTab.getCodeArea().requestFocus());
+
+                    // Update status bar with current position
+                    updateStatusBar(editorTab.getCodeArea());
+                }
+            }
+        });
+    }
+
+    /**
+     * Updates the status bar with current cursor position
+     */
+    private void updateStatusBar(CodeArea codeArea) {
+        int line = codeArea.getCurrentParagraph() + 1;
+        int column = codeArea.getCaretColumn() + 1;
+        statusLabel.setText("Line: " + line + ", Column: " + column);
+    }
+
+    /**
+     * Apply custom CSS styles to the scene
+     */
+    private void applyCustomStyles(Scene scene) {
+        // Basic scrollbar styling for the CodeArea
         String customStyles =
                 // Basic scrollbar styling for the CodeArea
                 ".virtual-flow .scroll-bar:vertical {" +
@@ -118,6 +186,15 @@ public class TextEditorWindow {
                         "}" +
                         ".styled-text-area .text {" +
                         "    -fx-fill: " + TEXT_COLOR + ";" +
+                        "}" +
+                        // Enhanced caret styling for better visibility
+                        ".styled-text-area .caret {" +
+                        "    -fx-stroke-width: 2.0;" +
+                        "    -fx-stroke: " + CURSOR_COLOR + ";" +
+                        "}" +
+                        // Current line highlighting
+                        ".styled-text-area .current-line {" +
+                        "    -fx-background-color: " + CURRENT_LINE_COLOR + ";" +
                         "}";
 
         // Custom tab styling
@@ -146,7 +223,7 @@ public class TextEditorWindow {
                         ".tab-pane > .tab-header-area > .headers-region > .tab:selected {" +
                         "    -fx-background-color: " + TAB_SELECTED_COLOR + ";" +
                         "    -fx-border-width: 0 0 2 0;" +
-                        "    -fx-border-color: #FFA500;" + // Orange indicator for selected tab
+                        "    -fx-border-color: " + CURSOR_COLOR + ";" + // Orange indicator for selected tab
                         "    -fx-focus-color: transparent;" + // Disable focus highlight
                         "    -fx-faint-focus-color: transparent;" + // Also disable the faint variant
                         "}" +
@@ -167,17 +244,6 @@ public class TextEditorWindow {
         // Add both styles to the scene
         scene.getStylesheets().add("data:text/css," + customStyles.replace(" ", "%20"));
         scene.getStylesheets().add("data:text/css," + customTabStyle.replace(" ", "%20"));
-
-        // Create initial tabs with empty content
-        createNewTab("Untitled");
-
-        // Select the first tab
-        tabPane.getSelectionModel().select(0);
-
-        // Set the window title
-        stage.setTitle("Tricky Teta"); // Updated name to reflect purpose
-        stage.setScene(scene);
-        stage.show();
     }
 
     /**
@@ -199,6 +265,16 @@ public class TextEditorWindow {
             // Add line numbers
             codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
 
+            // Make sure the code area is editable and can receive focus/clicks
+            codeArea.setEditable(true);
+            codeArea.setMouseTransparent(false);
+            codeArea.setFocusTraversable(true);
+
+            // Add explicit mouse click handler to ensure focus
+            codeArea.setOnMouseClicked(event -> {
+                codeArea.requestFocus();
+            });
+
             // Apply styling
             codeArea.setStyle(
                     "-fx-background-color: " + BACKGROUND_COLOR + ";" +
@@ -209,6 +285,27 @@ public class TextEditorWindow {
 
             // Enable word wrap for note-taking
             codeArea.setWrapText(true);
+
+            // Setup current line highlighting
+            codeArea.currentParagraphProperty().addListener((obs, oldLine, newLine) -> {
+                // Remove highlight from old line
+                if (oldLine != null) {
+                    codeArea.setStyle(oldLine.intValue(), Collections.emptyList());
+                }
+
+                // Add highlight to new line
+                if (newLine != null) {
+                    codeArea.setStyle(newLine.intValue(), Collections.singleton("current-line"));
+                }
+            });
+
+            // Update status bar when caret position changes
+            codeArea.caretPositionProperty().addListener((obs, oldPos, newPos) -> {
+                updateStatusBar(codeArea);
+            });
+
+            // Setup caret flash time for better visibility (optional enhancement)
+            codeArea.setStyle("-fx-caret-blink-rate: 500ms;");
 
             // Create a virtualized scroll pane that properly handles scrolling
             scrollPane = new VirtualizedScrollPane<>(codeArea);
@@ -267,6 +364,9 @@ public class TextEditorWindow {
         // Select the new tab
         tabPane.getSelectionModel().select(tab);
 
+        // Focus the editor in the new tab
+        Platform.runLater(() -> editorTab.getCodeArea().requestFocus());
+
         // Add close handler to remove from map
         tab.setOnClosed(e -> tabContents.remove(tab));
 
@@ -306,6 +406,12 @@ public class TextEditorWindow {
 
             // Set content
             editorTab.getCodeArea().replaceText(content);
+
+            // Move cursor to beginning of file
+            editorTab.getCodeArea().moveTo(0);
+
+            // Make sure to focus the code area
+            Platform.runLater(() -> editorTab.getCodeArea().requestFocus());
         }
     }
 
@@ -344,6 +450,9 @@ public class TextEditorWindow {
 
             // Write to file
             FileHandler.writeToFile(editorTab.getFile(), editorTab.getCodeArea().getText());
+
+            // Refocus the code area after saving
+            Platform.runLater(() -> editorTab.getCodeArea().requestFocus());
         }
     }
 
@@ -381,17 +490,29 @@ public class TextEditorWindow {
         // Cut/Copy/Paste
         scene.getAccelerators().put(keyCombCut, () -> {
             EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) currentTab.getCodeArea().cut();
+            if (currentTab != null) {
+                currentTab.getCodeArea().cut();
+                // Ensure focus after operation
+                Platform.runLater(() -> currentTab.getCodeArea().requestFocus());
+            }
         });
 
         scene.getAccelerators().put(keyCombCopy, () -> {
             EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) currentTab.getCodeArea().copy();
+            if (currentTab != null) {
+                currentTab.getCodeArea().copy();
+                // Ensure focus after operation
+                Platform.runLater(() -> currentTab.getCodeArea().requestFocus());
+            }
         });
 
         scene.getAccelerators().put(keyCombPaste, () -> {
             EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) currentTab.getCodeArea().paste();
+            if (currentTab != null) {
+                currentTab.getCodeArea().paste();
+                // Ensure focus after operation
+                Platform.runLater(() -> currentTab.getCodeArea().requestFocus());
+            }
         });
 
         // Close tab (Ctrl+W)
