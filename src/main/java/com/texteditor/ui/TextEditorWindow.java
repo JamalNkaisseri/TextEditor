@@ -4,15 +4,14 @@ import com.texteditor.io.FileHandler;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.flowless.VirtualizedScrollPane;
@@ -21,6 +20,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static javafx.application.Application.STYLESHEET_MODENA;
 import static javafx.application.Application.setUserAgentStylesheet;
@@ -97,10 +97,143 @@ public class TextEditorWindow {
             }
         });
 
+        // Set up tab close request handler
+        setupTabCloseHandler();
+
+        // Set up window close handler
+        setupWindowCloseHandler(stage);
+
         // Set the window title
         stage.setTitle("Tricky Teta"); // Updated name to reflect purpose
         stage.setScene(scene);
         stage.show();
+    }
+
+    /**
+     * Set up a handler for tab close events
+     */
+    private void setupTabCloseHandler() {
+        // Add a custom event handler for tab close requests
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
+
+        // Add listener to detect tab close button clicks
+        tabPane.getTabs().forEach(tab -> {
+            tab.setOnCloseRequest(event -> {
+                // Check if the tab content has unsaved changes
+                EditorTab editorTab = tabContents.get(tab);
+                if (editorTab != null && editorTab.hasUnsavedChanges()) {
+                    // Show confirmation dialog
+                    boolean shouldClose = showUnsavedChangesDialog(tab.getText());
+                    if (!shouldClose) {
+                        // Cancel the close event
+                        event.consume();
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Set up a handler for window close events
+     */
+    private void setupWindowCloseHandler(Stage stage) {
+        stage.setOnCloseRequest(event -> {
+            // Check if any tab has unsaved changes
+            boolean hasUnsavedChanges = false;
+            for (EditorTab tab : tabContents.values()) {
+                if (tab.hasUnsavedChanges()) {
+                    hasUnsavedChanges = true;
+                    break;
+                }
+            }
+
+            if (hasUnsavedChanges) {
+                // Show confirmation dialog
+                boolean shouldClose = showUnsavedChangesDialog("Tricky Teta");
+                if (!shouldClose) {
+                    // Cancel the close event
+                    event.consume();
+                }
+            }
+        });
+    }
+
+    /**
+     * Show dialog for unsaved changes
+     * @return true if the operation should proceed, false if canceled
+     */
+    private boolean showUnsavedChangesDialog(String tabName) {
+        // Create alert dialog
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Unsaved Changes");
+        alert.setHeaderText("Unsaved changes in " + tabName);
+        alert.setContentText("Would you like to save changes before closing?");
+
+        // Customize buttons
+        ButtonType saveButton = new ButtonType("Save");
+        ButtonType dontSaveButton = new ButtonType("Don't Save");
+        ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(saveButton, dontSaveButton, cancelButton);
+
+        // Apply dark theme to the dialog
+        applyDarkThemeToDialog(alert);
+
+        // Show dialog and process response
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent()) {
+            if (result.get() == saveButton) {
+                // Save the file
+                saveCurrentTab((Stage) alert.getOwner());
+                return true;
+            } else if (result.get() == dontSaveButton) {
+                // Close without saving
+                return true;
+            } else {
+                // Cancel the close operation
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Apply dark theme to dialog
+     */
+    private void applyDarkThemeToDialog(Dialog<?> dialog) {
+        DialogPane dialogPane = dialog.getDialogPane();
+        dialogPane.setStyle(
+                "-fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "-fx-text-fill: " + TEXT_COLOR + ";"
+        );
+
+        // Apply style to buttons
+        dialogPane.getButtonTypes().forEach(buttonType -> {
+            Button button = (Button) dialogPane.lookupButton(buttonType);
+            button.setStyle(
+                    "-fx-background-color: #444444;" +
+                            "-fx-text-fill: " + TEXT_COLOR + ";" +
+                            "-fx-border-color: #666666;" +
+                            "-fx-border-radius: 3px;"
+            );
+        });
+
+        // Add CSS to handle label text color
+        dialog.getDialogPane().getScene().getRoot().setStyle(
+                "-fx-text-fill: " + TEXT_COLOR + ";" +
+                        "-fx-font-size: 14px;"
+        );
+
+        // Set text color for header and content text
+        Label headerLabel = (Label) dialogPane.lookup(".header-panel .label");
+        if (headerLabel != null) {
+            headerLabel.setStyle("-fx-text-fill: " + TEXT_COLOR + ";");
+        }
+
+        Label contentLabel = (Label) dialogPane.lookup(".content.label");
+        if (contentLabel != null) {
+            contentLabel.setStyle("-fx-text-fill: " + TEXT_COLOR + ";");
+        }
     }
 
     /**
@@ -195,6 +328,31 @@ public class TextEditorWindow {
                         // Current line highlighting
                         ".styled-text-area .current-line {" +
                         "    -fx-background-color: " + CURRENT_LINE_COLOR + ";" +
+                        "}" +
+                        // Fix for white scroll pane background
+                        ".scroll-pane, .scroll-pane > .viewport {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "}" +
+                        // Fix for virtualized scroll pane (RichTextFX specific)
+                        ".virtualized-scroll-pane {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "}" +
+                        // Fix for horizontal scrollbar
+                        ".virtual-flow .scroll-bar:horizontal," +
+                        ".scroll-bar:horizontal {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "    -fx-opacity: 1.0;" +
+                        "}" +
+                        ".virtual-flow .scroll-bar:horizontal .thumb," +
+                        ".scroll-bar:horizontal .thumb {" +
+                        "    -fx-background-color: " + SCROLLBAR_THUMB_COLOR + ";" +
+                        "    -fx-background-radius: 6px;" +
+                        "    -fx-opacity: 0.8;" +
+                        "}" +
+                        ".virtual-flow .scroll-bar:horizontal .track," +
+                        ".scroll-bar:horizontal .track {" +
+                        "    -fx-background-color: " + SCROLLBAR_TRACK_COLOR + ";" +
+                        "    -fx-background-radius: 0;" +
                         "}";
 
         // Custom tab styling
@@ -239,11 +397,55 @@ public class TextEditorWindow {
                         "    -fx-background-color: #CCCCCC;" +
                         "    -fx-shape: \"M 0,0 H1 L 4,3 7,0 H8 V1 L 5,4 8,7 V8 H7 L 4,5 1,8 H0 V7 L 3,4 0,1 Z\";" +
                         "    -fx-scale-shape: false;" +
+                        "}" +
+                        // Fix for tab content area
+                        ".tab-pane > .tab-content-area {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "}";
 
-        // Add both styles to the scene
+        // Root style to ensure all parts of the application use dark theme
+        String rootStyle =
+                // Style for the root BorderPane and Scene
+                ".root {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "    -fx-base: " + BACKGROUND_COLOR + ";" +
+                        "}";
+
+        // Add dialog styling
+        String dialogStyle =
+                // Style for dialog boxes
+                ".dialog-pane {" +
+                        "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
+                        "}" +
+                        ".dialog-pane .header-panel {" +
+                        "    -fx-background-color: #3D3D3D;" +
+                        "}" +
+                        ".dialog-pane .header-panel .label {" +
+                        "    -fx-text-fill: " + TEXT_COLOR + ";" +
+                        "}" +
+                        ".dialog-pane .content.label {" +
+                        "    -fx-text-fill: " + TEXT_COLOR + ";" +
+                        "}" +
+                        ".dialog-pane .button {" +
+                        "    -fx-background-color: #444444;" +
+                        "    -fx-text-fill: " + TEXT_COLOR + ";" +
+                        "    -fx-border-color: #666666;" +
+                        "    -fx-border-radius: 3px;" +
+                        "}" +
+                        ".dialog-pane .button:hover {" +
+                        "    -fx-background-color: #555555;" +
+                        "}" +
+                        ".dialog-pane:header .header-panel .label {" +
+                        "    -fx-font-size: 16px;" +
+                        "    -fx-font-weight: bold;" +
+                        "    -fx-text-fill: " + TEXT_COLOR + ";" +
+                        "}";
+
+        // Add all styles to the scene
         scene.getStylesheets().add("data:text/css," + customStyles.replace(" ", "%20"));
         scene.getStylesheets().add("data:text/css," + customTabStyle.replace(" ", "%20"));
+        scene.getStylesheets().add("data:text/css," + rootStyle.replace(" ", "%20"));
+        scene.getStylesheets().add("data:text/css," + dialogStyle.replace(" ", "%20"));
     }
 
     /**
@@ -254,6 +456,8 @@ public class TextEditorWindow {
         private VirtualizedScrollPane<CodeArea> scrollPane;
         private String fileName;
         private File file;
+        private String lastSavedContent;
+        private boolean isModified = false;
 
         public EditorTab(String fileName) {
             this.fileName = fileName;
@@ -261,6 +465,7 @@ public class TextEditorWindow {
 
             // Create the code area
             codeArea = new CodeArea();
+            lastSavedContent = "";
 
             // Add line numbers
             codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
@@ -304,6 +509,15 @@ public class TextEditorWindow {
                 updateStatusBar(codeArea);
             });
 
+            // Track text changes for "unsaved changes" detection
+            codeArea.textProperty().addListener((obs, oldText, newText) -> {
+                if (!newText.equals(lastSavedContent)) {
+                    isModified = true;
+                } else {
+                    isModified = false;
+                }
+            });
+
             // Setup caret flash time for better visibility (optional enhancement)
             codeArea.setStyle("-fx-caret-blink-rate: 500ms;");
 
@@ -333,6 +547,15 @@ public class TextEditorWindow {
 
         public void setFile(File file) {
             this.file = file;
+        }
+
+        public boolean hasUnsavedChanges() {
+            return isModified;
+        }
+
+        public void markAsSaved() {
+            lastSavedContent = codeArea.getText();
+            isModified = false;
         }
     }
 
@@ -367,8 +590,19 @@ public class TextEditorWindow {
         // Focus the editor in the new tab
         Platform.runLater(() -> editorTab.getCodeArea().requestFocus());
 
-        // Add close handler to remove from map
+        // Add close handler to remove from map and check for unsaved changes
         tab.setOnClosed(e -> tabContents.remove(tab));
+
+        // Add close request handler to this tab
+        tab.setOnCloseRequest(event -> {
+            EditorTab content = tabContents.get(tab);
+            if (content != null && content.hasUnsavedChanges()) {
+                boolean shouldClose = showUnsavedChangesDialog(tab.getText());
+                if (!shouldClose) {
+                    event.consume();
+                }
+            }
+        });
 
         return tab;
     }
@@ -406,6 +640,7 @@ public class TextEditorWindow {
 
             // Set content
             editorTab.getCodeArea().replaceText(content);
+            editorTab.markAsSaved();
 
             // Move cursor to beginning of file
             editorTab.getCodeArea().moveTo(0);
@@ -450,6 +685,9 @@ public class TextEditorWindow {
 
             // Write to file
             FileHandler.writeToFile(editorTab.getFile(), editorTab.getCodeArea().getText());
+
+            // Mark as saved
+            editorTab.markAsSaved();
 
             // Refocus the code area after saving
             Platform.runLater(() -> editorTab.getCodeArea().requestFocus());
@@ -518,10 +756,323 @@ public class TextEditorWindow {
         // Close tab (Ctrl+W)
         scene.getAccelerators().put(keyCombCloseTab, () -> {
             Tab currentTab = tabPane.getSelectionModel().getSelectedItem();
-            if (currentTab != null) tabPane.getTabs().remove(currentTab);
+            if (currentTab != null) {
+                // Check for unsaved changes before closing
+                EditorTab editorTab = tabContents.get(currentTab);
+                if (editorTab != null && editorTab.hasUnsavedChanges()) {
+                    boolean shouldClose = showUnsavedChangesDialog(currentTab.getText());
+                    if (shouldClose) {
+                        tabPane.getTabs().remove(currentTab);
+                    }
+                } else {
+                    tabPane.getTabs().remove(currentTab);
+                }
+            }
         });
 
-        // Exit (Ctrl+Q)
-        scene.getAccelerators().put(keyCombExit, () -> stage.close());
+        // Exit application (Ctrl+Q)
+        scene.getAccelerators().put(keyCombExit, () -> {
+            // Create a window close request event
+            WindowEvent closeEvent = new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST);
+            // Send the event to the stage
+            stage.fireEvent(closeEvent);
+            // If the event was not consumed (i.e., closing wasn't cancelled)
+            if (!closeEvent.isConsumed()) {
+                stage.close();
+            }
+        });
+
+        // Add keyboard handler for Ctrl+Tab to switch tabs
+        KeyCombination keyCombNextTab = new KeyCodeCombination(KeyCode.TAB, KeyCombination.CONTROL_DOWN);
+        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            if (keyCombNextTab.match(event)) {
+                int currentIndex = tabPane.getSelectionModel().getSelectedIndex();
+                int tabCount = tabPane.getTabs().size();
+                if (tabCount > 1) {
+                    int nextIndex = (currentIndex + 1) % tabCount;
+                    tabPane.getSelectionModel().select(nextIndex);
+                }
+                event.consume();
+            }
+        });
+
+        // Add keyboard handler for Ctrl+Shift+Tab to switch tabs in reverse
+        KeyCombination keyCombPrevTab = new KeyCodeCombination(KeyCode.TAB, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            if (keyCombPrevTab.match(event)) {
+                int currentIndex = tabPane.getSelectionModel().getSelectedIndex();
+                int tabCount = tabPane.getTabs().size();
+                if (tabCount > 1) {
+                    int prevIndex = (currentIndex - 1 + tabCount) % tabCount;
+                    tabPane.getSelectionModel().select(prevIndex);
+                }
+                event.consume();
+            }
+        });
+
+        // Add Ctrl+F for find functionality
+        KeyCombination keyCombFind = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+        scene.getAccelerators().put(keyCombFind, () -> {
+            showFindDialog(stage);
+        });
     }
+
+    /**
+     * Shows a dialog for finding text in the current document
+     */
+    private void showFindDialog(Stage stage) {
+        EditorTab currentTab = getCurrentEditorTab();
+        if (currentTab == null) return;
+
+        CodeArea codeArea = currentTab.getCodeArea();
+
+        // Create dialog
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Find Text");
+        dialog.setHeaderText("Find what:");
+
+        // Create dialog pane and apply dark theme
+        DialogPane dialogPane = dialog.getDialogPane();
+        applyDarkThemeToDialog(dialog);
+
+        // Create text field for search term
+        TextField searchField = new TextField();
+        searchField.setMinWidth(300);
+
+        // Add the text field to the dialog content
+        dialogPane.setContent(searchField);
+
+        // Create buttons
+        ButtonType findButtonType = new ButtonType("Find Next", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialogPane.getButtonTypes().addAll(findButtonType, cancelButtonType);
+
+        // Handle find button
+        dialog.setResultConverter(buttonType -> {
+            if (buttonType == findButtonType) {
+                return searchField.getText();
+            }
+            return null;
+        });
+
+        // Show dialog and handle result
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(searchTerm -> {
+            if (!searchTerm.isEmpty()) {
+                // Get current position
+                int currentPos = codeArea.getCaretPosition();
+
+                // Get text and search for the term
+                String text = codeArea.getText();
+                int foundPos = text.indexOf(searchTerm, currentPos);
+
+                // If not found from current position, try from beginning
+                if (foundPos == -1 && currentPos > 0) {
+                    foundPos = text.indexOf(searchTerm);
+                }
+
+                // If found, select it
+                if (foundPos != -1) {
+                    codeArea.selectRange(foundPos, foundPos + searchTerm.length());
+                    codeArea.requestFocus();
+                } else {
+                    // Not found, show message
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Find Results");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Cannot find \"" + searchTerm + "\"");
+                    applyDarkThemeToDialog(alert);
+                    alert.showAndWait();
+                }
+            }
+        });
+
+        // Make sure to focus the search field when dialog opens
+        Platform.runLater(() -> searchField.requestFocus());
+    }
+
+    /**
+     * Creates a menu bar with standard text editor functionality
+     * @param stage The primary stage
+     * @return A MenuBar instance
+     */
+    private MenuBar createMenuBar(Stage stage) {
+        MenuBar menuBar = new MenuBar();
+        menuBar.setStyle("-fx-background-color: " + TAB_HEADER_COLOR + ";");
+
+        // File menu
+        Menu fileMenu = new Menu("File");
+        MenuItem newItem = new MenuItem("New");
+        newItem.setAccelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN));
+        newItem.setOnAction(e -> createNewTab());
+
+        MenuItem openItem = new MenuItem("Open");
+        openItem.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
+        openItem.setOnAction(e -> openFile(stage));
+
+        MenuItem saveItem = new MenuItem("Save");
+        saveItem.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+        saveItem.setOnAction(e -> saveCurrentTab(stage));
+
+        MenuItem saveAsItem = new MenuItem("Save As...");
+        saveAsItem.setOnAction(e -> saveAsCurrentTab(stage));
+
+        MenuItem closeItem = new MenuItem("Close Tab");
+        closeItem.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
+        closeItem.setOnAction(e -> {
+            Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+            if (selectedTab != null) {
+                // Check for unsaved changes directly
+                EditorTab editorTab = tabContents.get(selectedTab);
+                if (editorTab != null && editorTab.hasUnsavedChanges()) {
+                    boolean shouldClose = showUnsavedChangesDialog(selectedTab.getText());
+                    if (shouldClose) {
+                        tabPane.getTabs().remove(selectedTab);
+                    }
+                } else {
+                    // No unsaved changes, close directly
+                    tabPane.getTabs().remove(selectedTab);
+                }
+            }
+        });
+
+        MenuItem exitItem = new MenuItem("Exit");
+        exitItem.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+        exitItem.setOnAction(e -> {
+            WindowEvent closeEvent = new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST);
+            stage.fireEvent(closeEvent);
+            if (!closeEvent.isConsumed()) {
+                stage.close();
+            }
+        });
+
+        fileMenu.getItems().addAll(newItem, openItem, saveItem, saveAsItem, new SeparatorMenuItem(), closeItem, new SeparatorMenuItem(), exitItem);
+
+        // Edit menu
+        Menu editMenu = new Menu("Edit");
+        MenuItem undoItem = new MenuItem("Undo");
+        undoItem.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN));
+        undoItem.setOnAction(e -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().undo();
+            }
+        });
+
+        MenuItem redoItem = new MenuItem("Redo");
+        redoItem.setAccelerator(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN));
+        redoItem.setOnAction(e -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().redo();
+            }
+        });
+
+        MenuItem cutItem = new MenuItem("Cut");
+        cutItem.setAccelerator(new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN));
+        cutItem.setOnAction(e -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().cut();
+            }
+        });
+
+        MenuItem copyItem = new MenuItem("Copy");
+        copyItem.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
+        copyItem.setOnAction(e -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().copy();
+            }
+        });
+
+        MenuItem pasteItem = new MenuItem("Paste");
+        pasteItem.setAccelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN));
+        pasteItem.setOnAction(e -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().paste();
+            }
+        });
+
+        MenuItem selectAllItem = new MenuItem("Select All");
+        selectAllItem.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN));
+        selectAllItem.setOnAction(e -> {
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().selectAll();
+            }
+        });
+
+        MenuItem findItem = new MenuItem("Find");
+        findItem.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
+        findItem.setOnAction(e -> showFindDialog(stage));
+
+        editMenu.getItems().addAll(undoItem, redoItem, new SeparatorMenuItem(), cutItem, copyItem, pasteItem,
+                new SeparatorMenuItem(), selectAllItem, new SeparatorMenuItem(), findItem);
+
+        // Help menu
+        Menu helpMenu = new Menu("Help");
+        MenuItem aboutItem = new MenuItem("About");
+        aboutItem.setOnAction(e -> showAboutDialog(stage));
+
+        helpMenu.getItems().add(aboutItem);
+
+        // Add menus to menu bar
+        menuBar.getMenus().addAll(fileMenu, editMenu, helpMenu);
+
+        return menuBar;
+    }
+
+    /**
+     * Shows the About dialog
+     */
+    private void showAboutDialog(Stage stage) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("About Tricky Teta");
+        alert.setHeaderText("Tricky Teta Text Editor");
+        alert.setContentText("Version 1.0\n\nA simple text editor with dark theme for comfortable writing and coding.");
+
+        applyDarkThemeToDialog(alert);
+        alert.showAndWait();
+    }
+
+    /**
+     * Save As functionality for the current tab
+     */
+    private void saveAsCurrentTab(Stage stage) {
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+
+        if (selectedTab != null) {
+            EditorTab editorTab = tabContents.get(selectedTab);
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Save As");
+
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("Text Files", "*.txt", "*.md", "*.java", "*.html", "*.css", "*.js"),
+                    new FileChooser.ExtensionFilter("Java Files", "*.java"),
+                    new FileChooser.ExtensionFilter("Markdown", "*.md"),
+                    new FileChooser.ExtensionFilter("Web Files", "*.html", "*.css", "*.js"),
+                    new FileChooser.ExtensionFilter("All Files", "*.*")
+            );
+
+            // Show dialog
+            File file = fileChooser.showSaveDialog(stage);
+
+            if (file != null) {
+                // Write to file
+                FileHandler.writeToFile(file, editorTab.getCodeArea().getText());
+
+                // Update file info
+                editorTab.setFile(file);
+                editorTab.setFileName(file.getName());
+                selectedTab.setText(file.getName());
+
+                // Mark as saved
+                editorTab.markAsSaved();
+            }
+        }
+    }
+
 }
