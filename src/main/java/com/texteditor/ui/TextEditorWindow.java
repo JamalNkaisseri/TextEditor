@@ -634,10 +634,14 @@ public class TextEditorWindow {
         fileChooser.setTitle("Open File");
 
         // Add filters for text files only
+        FileChooser.ExtensionFilter allFilesFilter = new FileChooser.ExtensionFilter("All Files", "*", "*.*");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Text Files", "*.txt"),
-                new FileChooser.ExtensionFilter("All Files", "*.*")
+                allFilesFilter,
+                new FileChooser.ExtensionFilter("Text Files", "*.txt")
         );
+
+        // Set "All Files" as the default filter
+        fileChooser.setSelectedExtensionFilter(allFilesFilter);
 
         // Show dialog
         File file = fileChooser.showOpenDialog(stage);
