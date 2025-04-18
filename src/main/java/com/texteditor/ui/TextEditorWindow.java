@@ -3,12 +3,16 @@ package com.texteditor.ui;
 import com.texteditor.io.FileHandler;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -41,7 +45,10 @@ public class TextEditorWindow {
     private static final String CURSOR_COLOR = "#FFA500";             // Orange for cursor
     private static final String CURRENT_LINE_COLOR = "#383838";       // Slightly lighter than background for current line
 
-    private TabPane tabPane;  // TabPane to hold multiple document tabs
+    private TabPane tabPane;// TabPane to hold multiple document tabs
+    private BorderPane root;
+    private TextField searchField;
+    private HBox findBar;
     private int untitledCount = 1;  // Counter for untitled documents
     private Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
     private Label statusLabel;  // Status bar to display cursor position
@@ -76,12 +83,16 @@ public class TextEditorWindow {
         statusLabel.setStyle("-fx-background-color: #333333; -fx-text-fill: #BBBBBB;");
 
         // Create the root layout container
-        BorderPane root = new BorderPane();
+        root = new BorderPane();
         root.setCenter(tabPane);
         root.setBottom(statusLabel);
 
         // Create a scene with the root pane
-        Scene scene = new Scene(root, 800, 600);
+        StackPane stack = new StackPane();
+        stack.getChildren().add(root);
+        Scene scene = new Scene(stack, 800, 600);
+
+        initializeFindBar(stack, stage);
 
         // Set up keyboard shortcuts
         setupKeyboardShortcuts(scene, stage);
@@ -813,268 +824,142 @@ public class TextEditorWindow {
         });
 
         // Add Ctrl+F for find functionality
-        KeyCombination keyCombFind = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
-        scene.getAccelerators().put(keyCombFind, () -> {
-            showFindDialog(stage);
+        scene.getAccelerators().put(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN), () -> {
+            findBar.setVisible(true);
+            Platform.runLater(() -> {
+                searchField.requestFocus();
+                searchField.selectAll();
+            });
         });
+
+
     }
 
     /**
      * Shows a dialog for finding text in the current document
      */
-    private void showFindDialog(Stage stage) {
-        EditorTab currentTab = getCurrentEditorTab();
-        if (currentTab == null) return;
+    private void initializeFindBar(StackPane stack, Stage stage) {
+        searchField = new TextField();
+        searchField.setPromptText("Find...");
+        searchField.setPrefWidth(200);  // Limit width
+        searchField.setStyle(
+                "-fx-background-color: #222; -fx-text-fill: #DDD; -fx-prompt-text-fill: #888; " +
+                        "-fx-border-color: #444; -fx-border-radius: 4px; -fx-background-radius: 4px;"
+        );
 
-        CodeArea codeArea = currentTab.getCodeArea();
+        Button closeBtn = new Button("✕");
+        closeBtn.setOnAction(e -> findBar.setVisible(false));
+        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CCC;");
 
-        // Create dialog
-        Dialog<String> dialog = new Dialog<>();
-        dialog.setTitle("Find Text");
-        dialog.setHeaderText("Find what:");
+        Button nextBtn = new Button("↓");
+        nextBtn.setStyle("-fx-background-color: #333; -fx-text-fill: #CCC; -fx-background-radius: 3;");
 
-        // Create dialog pane and apply dark theme
-        DialogPane dialogPane = dialog.getDialogPane();
-        applyDarkThemeToDialog(dialog);
+        Button prevBtn = new Button("↑");
+        prevBtn.setStyle("-fx-background-color: #333; -fx-text-fill: #CCC; -fx-background-radius: 3;");
 
-        // Create text field for search term
-        TextField searchField = new TextField();
-        searchField.setMinWidth(300);
+        // Setup search navigation buttons
+        nextBtn.setOnAction(e -> findNext(searchField.getText()));
+        prevBtn.setOnAction(e -> findPrevious(searchField.getText()));
 
-        // Add the text field to the dialog content
-        dialogPane.setContent(searchField);
+        findBar = new HBox(5, searchField, prevBtn, nextBtn, closeBtn);
+        findBar.setPadding(new Insets(5));
+        findBar.setMaxHeight(35);  // Constrain height
+        findBar.setMaxWidth(Region.USE_PREF_SIZE);  // Use preferred size for width
+        findBar.setStyle("-fx-background-color: #2a2a2a; -fx-border-color: #555; " +
+                "-fx-border-radius: 3; -fx-background-radius: 3; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 0, 2);");
+        findBar.setAlignment(Pos.CENTER_LEFT);
+        findBar.setVisible(false); // Initially hidden
 
-        // Create buttons
-        ButtonType findButtonType = new ButtonType("Find Next", ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancelButtonType = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-        dialogPane.getButtonTypes().addAll(findButtonType, cancelButtonType);
+        // Position in top-right with proper margins
+        StackPane.setAlignment(findBar, Pos.TOP_RIGHT);
+        StackPane.setMargin(findBar, new Insets(10, 15, 0, 0));
 
-        // Handle find button
-        dialog.setResultConverter(buttonType -> {
-            if (buttonType == findButtonType) {
-                return searchField.getText();
-            }
-            return null;
-        });
+        // Add to stack pane on top of the content
+        stack.getChildren().add(findBar);
 
-        // Show dialog and handle result
-        Optional<String> result = dialog.showAndWait();
-        result.ifPresent(searchTerm -> {
-            if (!searchTerm.isEmpty()) {
-                // Get current position
-                int currentPos = codeArea.getCaretPosition();
+        // Ensure the find bar is on top
+        findBar.toFront();
 
-                // Get text and search for the term
-                String text = codeArea.getText();
-                int foundPos = text.indexOf(searchTerm, currentPos);
+        // Handle search logic on Enter key
+        searchField.setOnAction(e -> findNext(searchField.getText()));
 
-                // If not found from current position, try from beginning
-                if (foundPos == -1 && currentPos > 0) {
-                    foundPos = text.indexOf(searchTerm);
+        // Add keyboard handler to close find bar on ESC
+        searchField.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                findBar.setVisible(false);
+                // Return focus to editor
+                EditorTab currentTab = getCurrentEditorTab();
+                if (currentTab != null) {
+                    currentTab.getCodeArea().requestFocus();
                 }
-
-                // If found, select it
-                if (foundPos != -1) {
-                    codeArea.selectRange(foundPos, foundPos + searchTerm.length());
-                    codeArea.requestFocus();
-                } else {
-                    // Not found, show message
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Find Results");
-                    alert.setHeaderText(null);
-                    alert.setContentText("Cannot find \"" + searchTerm + "\"");
-                    applyDarkThemeToDialog(alert);
-                    alert.showAndWait();
-                }
+                event.consume();
             }
         });
-
-        // Make sure to focus the search field when dialog opens
-        Platform.runLater(() -> searchField.requestFocus());
     }
 
-    /**
-     * Creates a menu bar with standard text editor functionality
-     * @param stage The primary stage
-     * @return A MenuBar instance
-     */
-    private MenuBar createMenuBar(Stage stage) {
-        MenuBar menuBar = new MenuBar();
-        menuBar.setStyle("-fx-background-color: " + TAB_HEADER_COLOR + ";");
+    // Helper method for finding the next occurrence
+    private void findNext(String query) {
+        if (query == null || query.isEmpty()) return;
 
-        // File menu
-        Menu fileMenu = new Menu("File");
-        MenuItem newItem = new MenuItem("New");
-        newItem.setAccelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN));
-        newItem.setOnAction(e -> createNewTab());
+        CodeArea codeArea = getCurrentEditorTab().getCodeArea();
+        String text = codeArea.getText();
+        int start = codeArea.getSelection().getEnd();
+        int index = text.indexOf(query, start);
 
-        MenuItem openItem = new MenuItem("Open");
-        openItem.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
-        openItem.setOnAction(e -> openFile(stage));
-
-        MenuItem saveItem = new MenuItem("Save");
-        saveItem.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-        saveItem.setOnAction(e -> saveCurrentTab(stage));
-
-        MenuItem saveAsItem = new MenuItem("Save As...");
-        saveAsItem.setOnAction(e -> saveAsCurrentTab(stage));
-
-        MenuItem closeItem = new MenuItem("Close Tab");
-        closeItem.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
-        closeItem.setOnAction(e -> {
-            Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
-            if (selectedTab != null) {
-                // Check for unsaved changes directly
-                EditorTab editorTab = tabContents.get(selectedTab);
-                if (editorTab != null && editorTab.hasUnsavedChanges()) {
-                    boolean shouldClose = showUnsavedChangesDialog(selectedTab.getText());
-                    if (shouldClose) {
-                        tabPane.getTabs().remove(selectedTab);
-                    }
-                } else {
-                    // No unsaved changes, close directly
-                    tabPane.getTabs().remove(selectedTab);
-                }
-            }
-        });
-
-        MenuItem exitItem = new MenuItem("Exit");
-        exitItem.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
-        exitItem.setOnAction(e -> {
-            WindowEvent closeEvent = new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST);
-            stage.fireEvent(closeEvent);
-            if (!closeEvent.isConsumed()) {
-                stage.close();
-            }
-        });
-
-        fileMenu.getItems().addAll(newItem, openItem, saveItem, saveAsItem, new SeparatorMenuItem(), closeItem, new SeparatorMenuItem(), exitItem);
-
-        // Edit menu
-        Menu editMenu = new Menu("Edit");
-        MenuItem undoItem = new MenuItem("Undo");
-        undoItem.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN));
-        undoItem.setOnAction(e -> {
-            EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) {
-                currentTab.getCodeArea().undo();
-            }
-        });
-
-        MenuItem redoItem = new MenuItem("Redo");
-        redoItem.setAccelerator(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN));
-        redoItem.setOnAction(e -> {
-            EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) {
-                currentTab.getCodeArea().redo();
-            }
-        });
-
-        MenuItem cutItem = new MenuItem("Cut");
-        cutItem.setAccelerator(new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN));
-        cutItem.setOnAction(e -> {
-            EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) {
-                currentTab.getCodeArea().cut();
-            }
-        });
-
-        MenuItem copyItem = new MenuItem("Copy");
-        copyItem.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
-        copyItem.setOnAction(e -> {
-            EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) {
-                currentTab.getCodeArea().copy();
-            }
-        });
-
-        MenuItem pasteItem = new MenuItem("Paste");
-        pasteItem.setAccelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN));
-        pasteItem.setOnAction(e -> {
-            EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) {
-                currentTab.getCodeArea().paste();
-            }
-        });
-
-        MenuItem selectAllItem = new MenuItem("Select All");
-        selectAllItem.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN));
-        selectAllItem.setOnAction(e -> {
-            EditorTab currentTab = getCurrentEditorTab();
-            if (currentTab != null) {
-                currentTab.getCodeArea().selectAll();
-            }
-        });
-
-        MenuItem findItem = new MenuItem("Find");
-        findItem.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
-        findItem.setOnAction(e -> showFindDialog(stage));
-
-        editMenu.getItems().addAll(undoItem, redoItem, new SeparatorMenuItem(), cutItem, copyItem, pasteItem,
-                new SeparatorMenuItem(), selectAllItem, new SeparatorMenuItem(), findItem);
-
-        // Help menu
-        Menu helpMenu = new Menu("Help");
-        MenuItem aboutItem = new MenuItem("About");
-        aboutItem.setOnAction(e -> showAboutDialog(stage));
-
-        helpMenu.getItems().add(aboutItem);
-
-        // Add menus to menu bar
-        menuBar.getMenus().addAll(fileMenu, editMenu, helpMenu);
-
-        return menuBar;
-    }
-
-    /**
-     * Shows the About dialog
-     */
-    private void showAboutDialog(Stage stage) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About Tricky Teta");
-        alert.setHeaderText("Tricky Teta Text Editor");
-        alert.setContentText("Version 1.0\n\nA simple text editor with dark theme for comfortable writing and coding.");
-
-        applyDarkThemeToDialog(alert);
-        alert.showAndWait();
-    }
-
-    /**
-     * Save As functionality for the current tab
-     */
-    private void saveAsCurrentTab(Stage stage) {
-        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
-
-        if (selectedTab != null) {
-            EditorTab editorTab = tabContents.get(selectedTab);
-
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Save As");
-
-            fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("Text Files", "*.txt", "*.md", "*.java", "*.html", "*.css", "*.js"),
-                    new FileChooser.ExtensionFilter("Java Files", "*.java"),
-                    new FileChooser.ExtensionFilter("Markdown", "*.md"),
-                    new FileChooser.ExtensionFilter("Web Files", "*.html", "*.css", "*.js"),
-                    new FileChooser.ExtensionFilter("All Files", "*.*")
-            );
-
-            // Show dialog
-            File file = fileChooser.showSaveDialog(stage);
-
-            if (file != null) {
-                // Write to file
-                FileHandler.writeToFile(file, editorTab.getCodeArea().getText());
-
-                // Update file info
-                editorTab.setFile(file);
-                editorTab.setFileName(file.getName());
-                selectedTab.setText(file.getName());
-
-                // Mark as saved
-                editorTab.markAsSaved();
-            }
+        // If not found from current position, wrap around to beginning
+        if (index == -1 && start > 0) {
+            index = text.indexOf(query);
         }
+
+        if (index != -1) {
+            codeArea.selectRange(index, index + query.length());
+            codeArea.requestFollowCaret();  // Ensure the selection is visible
+            searchField.setStyle(
+                    "-fx-background-color: #222; -fx-text-fill: #DDD; -fx-prompt-text-fill: #888; " +
+                            "-fx-border-color: #444; -fx-border-radius: 4px; -fx-background-radius: 4px;"
+            );
+        } else {
+            // Visual feedback for not found
+            searchField.setStyle("-fx-background-color: #400; -fx-text-fill: #DDD;");
+        }
+        // Return focus to the search field for continued searching
+        searchField.requestFocus();
     }
+
+    // Helper method for finding the previous occurrence
+    private void findPrevious(String query) {
+        if (query == null || query.isEmpty()) return;
+
+        CodeArea codeArea = getCurrentEditorTab().getCodeArea();
+        String text = codeArea.getText();
+        int start = codeArea.getSelection().getStart() - 1;
+
+        // Make sure we don't go out of bounds
+        if (start < 0) start = 0;
+
+        // Search backward from current position
+        int index = text.lastIndexOf(query, start);
+
+        // If not found from current position, wrap around to end
+        if (index == -1) {
+            index = text.lastIndexOf(query);
+        }
+
+        if (index != -1) {
+            codeArea.selectRange(index, index + query.length());
+            codeArea.requestFollowCaret();  // Ensure the selection is visible
+            searchField.setStyle(
+                    "-fx-background-color: #222; -fx-text-fill: #DDD; -fx-prompt-text-fill: #888; " +
+                            "-fx-border-color: #444; -fx-border-radius: 4px; -fx-background-radius: 4px;"
+            );
+        } else {
+            // Visual feedback for not found
+            searchField.setStyle("-fx-background-color: #400; -fx-text-fill: #DDD;");
+        }
+        // Return focus to the search field for continued searching
+        searchField.requestFocus();
+    }
+
+
 
 }
