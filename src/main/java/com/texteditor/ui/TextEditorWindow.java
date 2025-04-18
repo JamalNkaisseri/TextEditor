@@ -52,8 +52,14 @@ public class TextEditorWindow {
      */
     public void start(Stage stage) {
         // Set up platform configuration
+
+        // App exits automatically when last window closes
         Platform.setImplicitExit(true);
+
+        // Apply modena
         setUserAgentStylesheet(STYLESHEET_MODENA);
+
+        //Reset it to rely on custom styling
         setUserAgentStylesheet(null);
 
         // Create the tab pane for multiple documents
@@ -90,6 +96,7 @@ public class TextEditorWindow {
         tabPane.getSelectionModel().select(0);
 
         // Focus the code area in the first tab
+        // Text area becomes active and ready for input
         Platform.runLater(() -> {
             EditorTab currentTab = getCurrentEditorTab();
             if (currentTab != null) {
@@ -104,7 +111,7 @@ public class TextEditorWindow {
         setupWindowCloseHandler(stage);
 
         // Set the window title
-        stage.setTitle("Tricky Teta"); // Updated name to reflect purpose
+        stage.setTitle("Tricky Teta");
         stage.setScene(scene);
         stage.show();
     }
@@ -665,11 +672,6 @@ public class TextEditorWindow {
                 FileChooser fileChooser = new FileChooser();
                 fileChooser.setTitle("Save File");
 
-                // Add filters
-                fileChooser.getExtensionFilters().addAll(
-                        new FileChooser.ExtensionFilter("Text Files", "*.txt"),
-                        new FileChooser.ExtensionFilter("All Files", "*.*")
-                );
 
                 // Show dialog
                 File file = fileChooser.showSaveDialog(stage);
