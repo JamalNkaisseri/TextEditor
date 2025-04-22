@@ -9,22 +9,16 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.stage.FileChooser;
-import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.stage.*;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static javafx.application.Application.STYLESHEET_MODENA;
 import static javafx.application.Application.setUserAgentStylesheet;
@@ -52,7 +46,9 @@ public class TextEditorWindow {
     private HBox findBar;
     private int untitledCount = 1;  // Counter for untitled documents
     private Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
-    private Label statusLabel;  // Status bar to display cursor position
+    private Label statusLabel;// Status bar to display cursor position
+    private final List<String> clipboardHistory = new ArrayList<>();
+
 
     /**
      * Initializes and displays the text editor window
@@ -537,6 +533,30 @@ public class TextEditorWindow {
                 }
             });
 
+            // Add a key event filter to the code area to listen for key presses
+            codeArea.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+
+                // Check if the user pressed Ctrl+C (copy)
+                if (event.isControlDown() && event.getCode() == KeyCode.C) {
+
+                    // Get the currently selected text in the code area
+                    String selectedText = codeArea.getSelectedText();
+
+                    // Only proceed if there is something selected
+                    if (!selectedText.isEmpty()) {
+
+                        // Add the selected text to the beginning of the clipboard history list
+                        clipboardHistory.add(0, selectedText);
+
+                        // Limit the clipboard history size to 20 items (FIFO)
+                        if (clipboardHistory.size() > 20) {
+                            clipboardHistory.remove(clipboardHistory.size() - 1); // Remove the oldest entry
+                        }
+                    }
+                }
+            });
+
+
             // Setup caret flash time for better visibility (optional enhancement)
             codeArea.setStyle("-fx-caret-blink-rate: 500ms;");
 
@@ -733,6 +753,7 @@ public class TextEditorWindow {
         KeyCombination keyCombPaste = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
         KeyCombination keyCombExit = new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN);
         KeyCombination keyCombCloseTab = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombClipboard = new KeyCodeCombination(KeyCode.V,KeyCombination.CONTROL_DOWN,KeyCombination.SHIFT_DOWN);
 
         // Create new tab (Ctrl+N)
         scene.getAccelerators().put(keyCombNew, this::createNewTab);
@@ -837,8 +858,64 @@ public class TextEditorWindow {
             });
         });
 
+        // Add handler to show clipboard history
+        scene.getAccelerators().put(keyCombClipboard, () -> {
+            showClipboardPopup(); // This should be a method that displays your clipboard history
+        });
+
 
     }
+
+    private void showClipboardPopup() {
+        if (clipboardHistory.isEmpty()) return;
+
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll(clipboardHistory);
+
+        // Dark theme & remove focus/borders
+        listView.setStyle(
+                "-fx-control-inner-background: #2b2b2b;" +
+                        "-fx-background-color: #2b2b2b;" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-focus-color: transparent;" +
+                        "-fx-faint-focus-color: transparent;" +
+                        "-fx-selection-bar: #444;" +
+                        "-fx-selection-bar-text: #ddd;" +
+                        "-fx-highlight-fill: transparent;" +
+                        "-fx-highlight-text-fill: #ddd;"
+        );
+
+        listView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                String selected = listView.getSelectionModel().getSelectedItem();
+                if (selected != null) {
+                    EditorTab currentTab = getCurrentEditorTab();
+                    if (currentTab != null) {
+                        CodeArea codeArea = currentTab.getCodeArea();
+                        int caretPos = codeArea.getCaretPosition();
+                        codeArea.insertText(caretPos, selected);
+                    }
+                    ((Stage) listView.getScene().getWindow()).close();
+                }
+            }
+        });
+
+        VBox container = new VBox(listView);
+        container.setStyle("-fx-background-color: #2b2b2b; -fx-padding: 10;");
+
+        Scene scene = new Scene(container, 400, 300);
+        scene.setFill(Color.web("#2b2b2b"));
+
+        Stage popupStage = new Stage(StageStyle.DECORATED);
+        popupStage.initModality(Modality.APPLICATION_MODAL);
+        popupStage.setTitle("Clipboard History");
+        popupStage.setScene(scene);
+        popupStage.showAndWait();
+    }
+
+
+
+
 
     /**
      * Shows a dialog for finding text in the current document
