@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static javafx.application.Application.STYLESHEET_MODENA;
 import static javafx.application.Application.setUserAgentStylesheet;
+import static org.fxmisc.richtext.model.TwoDimensional.Bias.Forward;
 
 /**
  * Main window class for the text editor application.
@@ -916,13 +917,22 @@ public class TextEditorWindow {
         }
 
         if (index != -1) {
+            // Move caret to the found word
+            int paragraph = codeArea.offsetToPosition(index, Forward).getMajor();
+            int column = codeArea.offsetToPosition(index, Forward).getMinor();
+            codeArea.moveTo(paragraph, column);
+            codeArea.requestFollowCaret();
+
+            // Select the word after moving
             codeArea.selectRange(index, index + query.length());
-            codeArea.requestFollowCaret();  // Ensure the selection is visible
+
             searchField.setStyle(
                     "-fx-background-color: #222; -fx-text-fill: #DDD; -fx-prompt-text-fill: #888; " +
                             "-fx-border-color: #444; -fx-border-radius: 4px; -fx-background-radius: 4px;"
             );
-        } else {
+        }
+
+        else {
             // Visual feedback for not found
             searchField.setStyle("-fx-background-color: #400; -fx-text-fill: #DDD;");
         }
@@ -930,7 +940,6 @@ public class TextEditorWindow {
         searchField.requestFocus();
     }
 
-    // Helper method for finding the previous occurrence
     private void findPrevious(String query) {
         if (query == null || query.isEmpty()) return;
 
@@ -938,31 +947,34 @@ public class TextEditorWindow {
         String text = codeArea.getText();
         int start = codeArea.getSelection().getStart() - 1;
 
-        // Make sure we don't go out of bounds
         if (start < 0) start = 0;
 
-        // Search backward from current position
         int index = text.lastIndexOf(query, start);
 
-        // If not found from current position, wrap around to end
         if (index == -1) {
             index = text.lastIndexOf(query);
         }
 
         if (index != -1) {
+            int paragraph = codeArea.offsetToPosition(index, Forward).getMajor();
+            int column = codeArea.offsetToPosition(index, Forward).getMinor();
+            codeArea.moveTo(paragraph, column);
+            codeArea.requestFollowCaret();
+
             codeArea.selectRange(index, index + query.length());
-            codeArea.requestFollowCaret();  // Ensure the selection is visible
+
             searchField.setStyle(
                     "-fx-background-color: #222; -fx-text-fill: #DDD; -fx-prompt-text-fill: #888; " +
                             "-fx-border-color: #444; -fx-border-radius: 4px; -fx-background-radius: 4px;"
             );
-        } else {
-            // Visual feedback for not found
+        }
+        else {
             searchField.setStyle("-fx-background-color: #400; -fx-text-fill: #DDD;");
         }
-        // Return focus to the search field for continued searching
+
         searchField.requestFocus();
     }
+
 
 
 
