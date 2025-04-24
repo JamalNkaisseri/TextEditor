@@ -12,6 +12,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.*;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
@@ -44,7 +45,8 @@ public class TextEditorWindow {
     private BorderPane root;
     private TextField searchField;
     private HBox findBar;
-    private int untitledCount = 1;  // Counter for untitled documents
+    private int untitledCount = 1;// Counter for untitled documents
+    private int currentFontSize = 14; // Default font size
     private Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
     private Label statusLabel;// Status bar to display cursor position
     private final List<String> clipboardHistory = new ArrayList<>();
@@ -495,11 +497,11 @@ public class TextEditorWindow {
                 codeArea.requestFocus();
             });
 
-            // Apply styling
+            // Apply styling with the current font size
             codeArea.setStyle(
                     "-fx-background-color: " + BACKGROUND_COLOR + ";" +
                             "-fx-font-family: 'Monospace';" +
-                            "-fx-font-size: 14px;" +
+                            "-fx-font-size: " + currentFontSize + "px;" +
                             "-fx-text-fill: " + TEXT_COLOR + ";"
             );
 
@@ -535,16 +537,13 @@ public class TextEditorWindow {
 
             // Add a key event filter to the code area to listen for key presses
             codeArea.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-
                 // Check if the user pressed Ctrl+C (copy)
                 if (event.isControlDown() && event.getCode() == KeyCode.C) {
-
                     // Get the currently selected text in the code area
                     String selectedText = codeArea.getSelectedText();
 
                     // Only proceed if there is something selected
                     if (!selectedText.isEmpty()) {
-
                         // Add the selected text to the beginning of the clipboard history list
                         clipboardHistory.add(0, selectedText);
 
@@ -555,7 +554,6 @@ public class TextEditorWindow {
                     }
                 }
             });
-
 
             // Setup caret flash time for better visibility (optional enhancement)
             codeArea.setStyle("-fx-caret-blink-rate: 500ms;");
@@ -741,9 +739,53 @@ public class TextEditorWindow {
     }
 
     /**
+     * Sets the font size for the current editor
+     */
+    private void setFontSize(int fontSize) {
+        EditorTab currentTab = getCurrentEditorTab();
+        if (currentTab != null) {
+            CodeArea codeArea = currentTab.getCodeArea();
+
+            // Update the base style with new font size
+            codeArea.setStyle(
+                    "-fx-background-color: " + BACKGROUND_COLOR + ";" +
+                            "-fx-font-family: 'Monospace';" +
+                            "-fx-font-size: " + fontSize + "px;" +
+                            "-fx-text-fill: " + TEXT_COLOR + ";"
+            );
+
+            // Force a refresh of the area to apply styles
+            String currentText = codeArea.getText();
+            codeArea.clear();
+            codeArea.appendText(currentText);
+
+            // Update the global font size
+            currentFontSize = fontSize;
+
+            // Show font size in status bar temporarily
+            String originalStatus = statusLabel.getText();
+            statusLabel.setText("Font size: " + fontSize + "px");
+
+            // Restore status after 3 seconds
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    Platform.runLater(() -> statusLabel.setText(originalStatus));
+                }
+            }, 3000);
+
+            // Ensure the codeArea maintains focus
+            Platform.runLater(() -> codeArea.requestFocus());
+        }
+    }
+
+
+    /**
      * Sets up keyboard shortcuts
      */
     private void setupKeyboardShortcuts(Scene scene, Stage stage) {
+        // Add at the top of the method:
         // Define shortcuts
         KeyCombination keyCombNew = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN);
         KeyCombination keyCombOpen = new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN);
@@ -753,15 +795,17 @@ public class TextEditorWindow {
         KeyCombination keyCombPaste = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
         KeyCombination keyCombExit = new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN);
         KeyCombination keyCombCloseTab = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
-        KeyCombination keyCombClipboard = new KeyCodeCombination(KeyCode.V,KeyCombination.CONTROL_DOWN,KeyCombination.SHIFT_DOWN);
+        KeyCombination keyCombClipboard = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-        // Create new tab (Ctrl+N)
+        // Font size shortcuts
+        KeyCombination keyCombIncFontPlus = new KeyCodeCombination(KeyCode.PLUS, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombIncFontEquals = new KeyCodeCombination(KeyCode.EQUALS, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombDecFont = new KeyCodeCombination(KeyCode.MINUS, KeyCombination.CONTROL_DOWN);
+        KeyCombination keyCombResetFont = new KeyCodeCombination(KeyCode.DIGIT0, KeyCombination.CONTROL_DOWN);
+
+        // Keep your existing shortcuts
         scene.getAccelerators().put(keyCombNew, this::createNewTab);
-
-        // Open file (Ctrl+O)
         scene.getAccelerators().put(keyCombOpen, () -> openFile(stage));
-
-        // Save file (Ctrl+S)
         scene.getAccelerators().put(keyCombSave, () -> saveCurrentTab(stage));
 
         // Cut/Copy/Paste
@@ -821,7 +865,30 @@ public class TextEditorWindow {
             }
         });
 
-        // Add keyboard handler for Ctrl+Tab to switch tabs
+        // Add font size shortcuts
+        scene.getAccelerators().put(keyCombIncFontPlus, () -> {
+            if (currentFontSize < 36) { // Maximum size
+                setFontSize(currentFontSize + 2);
+            }
+        });
+
+        scene.getAccelerators().put(keyCombIncFontEquals, () -> {
+            if (currentFontSize < 36) { // Maximum size
+                setFontSize(currentFontSize + 2);
+            }
+        });
+
+        scene.getAccelerators().put(keyCombDecFont, () -> {
+            if (currentFontSize > 8) { // Minimum size
+                setFontSize(currentFontSize - 2);
+            }
+        });
+
+        scene.getAccelerators().put(keyCombResetFont, () -> {
+            setFontSize(14); // Reset to default
+        });
+
+        // Keep your existing handler for Ctrl+Tab to switch tabs
         KeyCombination keyCombNextTab = new KeyCodeCombination(KeyCode.TAB, KeyCombination.CONTROL_DOWN);
         scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
             if (keyCombNextTab.match(event)) {
@@ -835,6 +902,7 @@ public class TextEditorWindow {
             }
         });
 
+        // And the rest of your existing shortcuts...
         // Add keyboard handler for Ctrl+Shift+Tab to switch tabs in reverse
         KeyCombination keyCombPrevTab = new KeyCodeCombination(KeyCode.TAB, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
         scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
@@ -862,8 +930,6 @@ public class TextEditorWindow {
         scene.getAccelerators().put(keyCombClipboard, () -> {
             showClipboardPopup(); // This should be a method that displays your clipboard history
         });
-
-
     }
 
     private void showClipboardPopup() {
