@@ -49,6 +49,7 @@ public class TextEditorWindow {
     private int currentFontSize = 14; // Default font size
     private Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
     private Label statusLabel;// Status bar to display cursor position
+    private Timer fontSizeDisplayTimer;
     private final List<String> clipboardHistory = new ArrayList<>();
 
 
@@ -754,24 +755,35 @@ public class TextEditorWindow {
                             "-fx-text-fill: " + TEXT_COLOR + ";"
             );
 
-            // Force a refresh of the area to apply styles
-            String currentText = codeArea.getText();
-            codeArea.clear();
-            codeArea.appendText(currentText);
+            // REMOVED: The problematic refresh code that was clearing text
+            // Now we just update the style without clearing the text
 
             // Update the global font size
             currentFontSize = fontSize;
 
-            // Show font size in status bar temporarily
-            String originalStatus = statusLabel.getText();
-            statusLabel.setText("Font size: " + fontSize + "px");
+            // Update the global font size
+            currentFontSize = fontSize;
 
-            // Restore status after 3 seconds
-            Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
+            // Cancel any existing font size display timer
+            if (fontSizeDisplayTimer != null) {
+                fontSizeDisplayTimer.cancel();
+                fontSizeDisplayTimer = null;
+            }
+
+            // Save current cursor position info
+            currentTab = getCurrentEditorTab();
+            int line = currentTab != null ? currentTab.getCodeArea().getCurrentParagraph() + 1 : 1;
+            int column = currentTab != null ? currentTab.getCodeArea().getCaretColumn() + 1 : 1;
+
+            // Show font size in status bar temporarily
+            Platform.runLater(() -> statusLabel.setText("Font size: " + currentFontSize + "px"));
+
+            // Create new timer to restore cursor position after delay
+            fontSizeDisplayTimer = new Timer();
+            fontSizeDisplayTimer.schedule(new TimerTask() {
                 @Override
                 public void run() {
-                    Platform.runLater(() -> statusLabel.setText(originalStatus));
+                    Platform.runLater(() -> statusLabel.setText("Line: " + line + ", Column: " + column));
                 }
             }, 3000);
 
