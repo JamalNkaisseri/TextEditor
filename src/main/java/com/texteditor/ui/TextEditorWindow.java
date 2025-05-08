@@ -485,6 +485,11 @@ public class TextEditorWindow {
             codeArea = new CodeArea();
             lastSavedContent = "";
 
+            setupAutoIndentation(codeArea);
+
+            // Add this line to set up auto-indentation
+            setupAutoIndentation(codeArea);
+
             // Add line numbers
             codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
 
@@ -563,6 +568,36 @@ public class TextEditorWindow {
             scrollPane = new VirtualizedScrollPane<>(codeArea);
         }
 
+        private void setupAutoIndentation(CodeArea codeArea) {
+            // Add a key event handler for Enter key to maintain indentation
+            codeArea.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                if (event.getCode() == KeyCode.ENTER) {
+                    // Get the current paragraph (line) text
+                    int currentParagraph = codeArea.getCurrentParagraph();
+                    String currentLineText = codeArea.getParagraph(currentParagraph).getText();
+
+                    // Extract leading whitespace only (no additional indentation)
+                    String leadingWhitespace = extractLeadingWhitespace(currentLineText);
+
+                    // Check if the current line ends with an opening brace
+                    // which would typically indicate we need additional indentation
+                    boolean shouldAddIndent = currentLineText.trim().endsWith("{");
+
+                    // Let the default handler process the Enter key first
+                    Platform.runLater(() -> {
+                        // Then insert the same indentation at the start of the new line
+                        // Add additional indent if needed
+                        if (shouldAddIndent) {
+                            // Add one level of indentation (4 spaces or a tab depending on your preference)
+                            codeArea.insertText(codeArea.getCaretPosition(), leadingWhitespace + "    ");
+                        } else {
+                            codeArea.insertText(codeArea.getCaretPosition(), leadingWhitespace);
+                        }
+                    });
+                }
+            });
+        }
+
         public VirtualizedScrollPane<CodeArea> getScrollPane() {
             return scrollPane;
         }
@@ -595,6 +630,23 @@ public class TextEditorWindow {
             lastSavedContent = codeArea.getText();
             isModified = false;
         }
+    }
+
+    /**
+     * Helper method to extract leading whitespace from a string
+     * Add this method to your TextEditorWindow class
+     */
+    private String extractLeadingWhitespace(String text) {
+        StringBuilder whitespace = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (Character.isWhitespace(c)) {
+                whitespace.append(c);
+            } else {
+                break;
+            }
+        }
+        return whitespace.toString();
     }
 
     /**
