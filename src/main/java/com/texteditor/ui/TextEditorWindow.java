@@ -16,6 +16,7 @@ import javafx.stage.*;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.flowless.VirtualizedScrollPane;
+import java.util.regex.Pattern;
 
 import java.io.File;
 import java.util.*;
@@ -39,6 +40,18 @@ public class TextEditorWindow {
     private static final String SCROLLBAR_TRACK_COLOR = "#3A3A3A";    // Darker grey for scrollbar track
     private static final String CURSOR_COLOR = "#FFA500";             // Orange for cursor
     private static final String CURRENT_LINE_COLOR = "#383838";       // Slightly lighter than background for current line
+
+    // Header and formatting colors
+    private static final String MAIN_HEADER_COLOR = "#4A9EFF";      // Blue for main headers
+    private static final String SUB_ITEM_COLOR = "#5CB85C";          // Green for a), b), c) items
+    private static final String BULLET_COLOR = "#888888";            // Grey for bullet points
+    private static final String IMPORTANT_COLOR = "#FF6B35";         // Orange for emphasis
+
+    // Regex patterns for auto-styling
+    private static final Pattern MAIN_HEADER_PATTERN = Pattern.compile("^.+:$");  // Lines ending with :
+    private static final Pattern SUB_ITEM_PATTERN = Pattern.compile("^\\s*[a-z]\\).*");  // Lines starting with a), b), etc.
+    private static final Pattern BULLET_PATTERN = Pattern.compile("^\\s*-.*");  // Lines starting with -
+    private static final Pattern DASH_HEADER_PATTERN = Pattern.compile("^[A-Z][a-zA-Z\\s&]+$");  // All caps headers like "Smart Contract Lifecycle"
 
     private TabPane tabPane;// TabPane to hold multiple document tabs
     private TextField searchField;
@@ -272,6 +285,54 @@ public class TextEditorWindow {
         int column = codeArea.getCaretColumn() + 1;
         statusLabel.setText("Line: " + line + ", Column: " + column);
     }
+    /**
+     * Apply automatic styling based on note formatting patterns
+     */
+    private void applyAutoStyling(CodeArea codeArea) {
+        String text = codeArea.getText();
+        String[] lines = text.split("\n", -1);
+
+        // Clear all existing styles first
+        codeArea.clearStyle(0, text.length());
+
+        int currentIndex = 0;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            String trimmedLine = line.trim();
+
+            if (!trimmedLine.isEmpty()) {
+                // Style collection for this line
+                Collection<String> styles = new ArrayList<>();
+
+                // Main headers (lines ending with :)
+                if (MAIN_HEADER_PATTERN.matcher(trimmedLine).matches()) {
+                    styles.add("main-header");
+                }
+                // Sub-items (a), b), c), etc.)
+                else if (SUB_ITEM_PATTERN.matcher(line).matches()) {
+                    styles.add("sub-item");
+                }
+                // Bullet points (lines starting with -)
+                else if (BULLET_PATTERN.matcher(line).matches()) {
+                    styles.add("bullet-point");
+                }
+                // Standalone headers (like "Smart Contract Lifecycle")
+                else if (DASH_HEADER_PATTERN.matcher(trimmedLine).matches() && !trimmedLine.contains(":")) {
+                    styles.add("section-header");
+                }
+
+                // Apply styles to the entire line range
+                if (!styles.isEmpty()) {
+                    int lineStart = currentIndex;
+                    int lineEnd = currentIndex + line.length();
+                    codeArea.setStyle(lineStart, lineEnd, styles);
+                }
+            }
+
+            // Move to next line (including newline character)
+            currentIndex += line.length() + 1;
+        }
+    }
 
     /**
      * Apply custom CSS styles to the scene
@@ -363,6 +424,24 @@ public class TextEditorWindow {
                         ".scroll-bar:horizontal .track {" +
                         "    -fx-background-color: " + SCROLLBAR_TRACK_COLOR + ";" +
                         "    -fx-background-radius: 0;" +
+                        "}" +
+                        // Auto-styling for note formatting
+                        ".styled-text-area .main-header {" +
+                        "    -fx-fill: " + MAIN_HEADER_COLOR + ";" +
+                        "    -fx-font-weight: bold;" +
+                        "    -fx-font-size: " + (currentFontSize + 4) + "px;" +
+                        "}" +
+                        ".styled-text-area .sub-item {" +
+                        "    -fx-fill: " + SUB_ITEM_COLOR + ";" +
+                        "    -fx-font-weight: bold;" +
+                        "}" +
+                        ".styled-text-area .bullet-point {" +
+                        "    -fx-fill: " + BULLET_COLOR + ";" +
+                        "}" +
+                        ".styled-text-area .section-header {" +
+                        "    -fx-fill: " + IMPORTANT_COLOR + ";" +
+                        "    -fx-font-weight: bold;" +
+                        "    -fx-font-size: " + (currentFontSize + 2) + "px;" +
                         "}";
 
         // Custom tab styling
@@ -452,10 +531,35 @@ public class TextEditorWindow {
                         "}";
 
         // Add all styles to the scene
-        scene.getStylesheets().add("data:text/css," + customStyles.replace(" ", "%20"));
-        scene.getStylesheets().add("data:text/css," + customTabStyle.replace(" ", "%20"));
-        scene.getStylesheets().add("data:text/css," + rootStyle.replace(" ", "%20"));
-        scene.getStylesheets().add("data:text/css," + dialogStyle.replace(" ", "%20"));
+        scene.getStylesheets().add("data:text/css," + encodeCSS(customStyles));
+        scene.getStylesheets().add("data:text/css," + encodeCSS(customTabStyle));
+        scene.getStylesheets().add("data:text/css," + encodeCSS(rootStyle));
+        scene.getStylesheets().add("data:text/css," + encodeCSS(dialogStyle));
+    }
+
+    /**
+     * Helper method to properly encode CSS for data URLs
+     */
+    private String encodeCSS(String css) {
+        return css.replace(" ", "%20")
+                .replace("\n", "%0A")
+                .replace("\r", "%0D")
+                .replace("\"", "%22")
+                .replace("#", "%23")
+                .replace("&", "%26")
+                .replace("'", "%27")
+                .replace("(", "%28")
+                .replace(")", "%29")
+                .replace("+", "%2B")
+                .replace(",", "%2C")
+                .replace("/", "%2F")
+                .replace(":", "%3A")
+                .replace(";", "%3B")
+                .replace("=", "%3D")
+                .replace("?", "%3F")
+                .replace("@", "%40")
+                .replace("[", "%5B")
+                .replace("]", "%5D");
     }
 
     /**
@@ -535,6 +639,13 @@ public class TextEditorWindow {
                         }
                     }
                 }
+            });
+
+            // Add auto-styling when text changes
+            codeArea.textProperty().addListener((obs, oldText, newText) -> {
+                isModified = !newText.equals(lastSavedContent);
+                // Apply auto-styling with a small delay to avoid performance issues
+                Platform.runLater(() -> applyAutoStyling(codeArea));
             });
 
             // Setup caret flash time for better visibility (optional enhancement)
@@ -716,9 +827,6 @@ public class TextEditorWindow {
         return currentTab != null ? tabContents.get(currentTab) : null;
     }
 
-    /**
-     * Sets the font size for the current editor
-     */
     private void setFontSize(int fontSize) {
         EditorTab currentTab = getCurrentEditorTab();
         if (currentTab != null) {
@@ -732,13 +840,11 @@ public class TextEditorWindow {
                             "-fx-text-fill: " + TEXT_COLOR + ";"
             );
 
-            // REMOVED: The problematic refresh code that was clearing text
-            // Now we just update the style without clearing the text
-
-            // Update the global font size
-
             // Update the global font size
             currentFontSize = fontSize;
+
+            // Reapply auto-styling after font size change
+            Platform.runLater(() -> applyAutoStyling(codeArea));
 
             // Cancel any existing font size display timer
             if (fontSizeDisplayTimer != null) {
