@@ -12,7 +12,6 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.stage.*;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
@@ -42,12 +41,11 @@ public class TextEditorWindow {
     private static final String CURRENT_LINE_COLOR = "#383838";       // Slightly lighter than background for current line
 
     private TabPane tabPane;// TabPane to hold multiple document tabs
-    private BorderPane root;
     private TextField searchField;
     private HBox findBar;
     private int untitledCount = 1;// Counter for untitled documents
     private int currentFontSize = 14; // Default font size
-    private Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
+    private final Map<Tab, EditorTab> tabContents = new HashMap<>();  // Map to store tab data
     private Label statusLabel;// Status bar to display cursor position
     private Timer fontSizeDisplayTimer;
     private final List<String> clipboardHistory = new ArrayList<>();
@@ -83,7 +81,7 @@ public class TextEditorWindow {
         statusLabel.setStyle("-fx-background-color: #333333; -fx-text-fill: #BBBBBB;");
 
         // Create the root layout container
-        root = new BorderPane();
+        BorderPane root = new BorderPane();
         root.setCenter(tabPane);
         root.setBottom(statusLabel);
 
@@ -92,7 +90,7 @@ public class TextEditorWindow {
         stack.getChildren().add(root);
         Scene scene = new Scene(stack, 800, 600);
 
-        initializeFindBar(stack, stage);
+        initializeFindBar(stack);
 
         // Set up keyboard shortcuts
         setupKeyboardShortcuts(scene, stage);
@@ -135,20 +133,18 @@ public class TextEditorWindow {
         tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
 
         // Add listener to detect tab close button clicks
-        tabPane.getTabs().forEach(tab -> {
-            tab.setOnCloseRequest(event -> {
-                // Check if the tab content has unsaved changes
-                EditorTab editorTab = tabContents.get(tab);
-                if (editorTab != null && editorTab.hasUnsavedChanges()) {
-                    // Show confirmation dialog
-                    boolean shouldClose = showUnsavedChangesDialog(tab.getText());
-                    if (!shouldClose) {
-                        // Cancel the close event
-                        event.consume();
-                    }
+        tabPane.getTabs().forEach(tab -> tab.setOnCloseRequest(event -> {
+            // Check if the tab content has unsaved changes
+            EditorTab editorTab = tabContents.get(tab);
+            if (editorTab != null && editorTab.hasUnsavedChanges()) {
+                // Show confirmation dialog
+                boolean shouldClose = showUnsavedChangesDialog(tab.getText());
+                if (!shouldClose) {
+                    // Cancel the close event
+                    event.consume();
                 }
-            });
-        });
+            }
+        }));
     }
 
     /**
@@ -200,17 +196,13 @@ public class TextEditorWindow {
         // Show dialog and process response
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent()) {
+            // Close without saving
+            // Cancel the close operation
             if (result.get() == saveButton) {
                 // Save the file
                 saveCurrentTab((Stage) alert.getOwner());
                 return true;
-            } else if (result.get() == dontSaveButton) {
-                // Close without saving
-                return true;
-            } else {
-                // Cancel the close operation
-                return false;
-            }
+            } else return result.get() == dontSaveButton;
         }
         return false;
     }
@@ -470,25 +462,19 @@ public class TextEditorWindow {
      * Inner class to represent the content of a tab
      */
     private class EditorTab {
-        private CodeArea codeArea;
-        private VirtualizedScrollPane<CodeArea> scrollPane;
-        private String fileName;
+        private final CodeArea codeArea;
+        private final VirtualizedScrollPane<CodeArea> scrollPane;
         private File file;
         private String lastSavedContent;
         private boolean isModified = false;
 
-        public EditorTab(String fileName) {
-            this.fileName = fileName;
+        public EditorTab() {
             this.file = null;
 
             // Create the code area
             codeArea = new CodeArea();
             lastSavedContent = "";
 
-            setupAutoIndentation(codeArea);
-
-            // Add this line to set up auto-indentation
-            setupAutoIndentation(codeArea);
 
             // Add line numbers
             codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
@@ -499,9 +485,7 @@ public class TextEditorWindow {
             codeArea.setFocusTraversable(true);
 
             // Add explicit mouse click handler to ensure focus
-            codeArea.setOnMouseClicked(event -> {
-                codeArea.requestFocus();
-            });
+            codeArea.setOnMouseClicked(event -> codeArea.requestFocus());
 
             // Apply styling with the current font size
             codeArea.setStyle(
@@ -518,28 +502,20 @@ public class TextEditorWindow {
             codeArea.currentParagraphProperty().addListener((obs, oldLine, newLine) -> {
                 // Remove highlight from old line
                 if (oldLine != null) {
-                    codeArea.setStyle(oldLine.intValue(), Collections.emptyList());
+                    codeArea.setStyle(oldLine, Collections.emptyList());
                 }
 
                 // Add highlight to new line
                 if (newLine != null) {
-                    codeArea.setStyle(newLine.intValue(), Collections.singleton("current-line"));
+                    codeArea.setStyle(newLine, Collections.singleton("current-line"));
                 }
             });
 
             // Update status bar when caret position changes
-            codeArea.caretPositionProperty().addListener((obs, oldPos, newPos) -> {
-                updateStatusBar(codeArea);
-            });
+            codeArea.caretPositionProperty().addListener((obs, oldPos, newPos) -> updateStatusBar(codeArea));
 
             // Track text changes for "unsaved changes" detection
-            codeArea.textProperty().addListener((obs, oldText, newText) -> {
-                if (!newText.equals(lastSavedContent)) {
-                    isModified = true;
-                } else {
-                    isModified = false;
-                }
-            });
+            codeArea.textProperty().addListener((obs, oldText, newText) -> isModified = !newText.equals(lastSavedContent));
 
             // Add a key event filter to the code area to listen for key presses
             codeArea.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
@@ -551,11 +527,11 @@ public class TextEditorWindow {
                     // Only proceed if there is something selected
                     if (!selectedText.isEmpty()) {
                         // Add the selected text to the beginning of the clipboard history list
-                        clipboardHistory.add(0, selectedText);
+                        clipboardHistory.addFirst(selectedText);
 
                         // Limit the clipboard history size to 20 items (FIFO)
                         if (clipboardHistory.size() > 20) {
-                            clipboardHistory.remove(clipboardHistory.size() - 1); // Remove the oldest entry
+                            clipboardHistory.removeLast(); // Remove the oldest entry
                         }
                     }
                 }
@@ -568,35 +544,6 @@ public class TextEditorWindow {
             scrollPane = new VirtualizedScrollPane<>(codeArea);
         }
 
-        private void setupAutoIndentation(CodeArea codeArea) {
-            // Add a key event handler for Enter key to maintain indentation
-            codeArea.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-                if (event.getCode() == KeyCode.ENTER) {
-                    // Get the current paragraph (line) text
-                    int currentParagraph = codeArea.getCurrentParagraph();
-                    String currentLineText = codeArea.getParagraph(currentParagraph).getText();
-
-                    // Extract leading whitespace only (no additional indentation)
-                    String leadingWhitespace = extractLeadingWhitespace(currentLineText);
-
-                    // Check if the current line ends with an opening brace
-                    // which would typically indicate we need additional indentation
-                    boolean shouldAddIndent = currentLineText.trim().endsWith("{");
-
-                    // Let the default handler process the Enter key first
-                    Platform.runLater(() -> {
-                        // Then insert the same indentation at the start of the new line
-                        // Add additional indent if needed
-                        if (shouldAddIndent) {
-                            // Add one level of indentation (4 spaces or a tab depending on your preference)
-                            codeArea.insertText(codeArea.getCaretPosition(), leadingWhitespace + "    ");
-                        } else {
-                            codeArea.insertText(codeArea.getCaretPosition(), leadingWhitespace);
-                        }
-                    });
-                }
-            });
-        }
 
         public VirtualizedScrollPane<CodeArea> getScrollPane() {
             return scrollPane;
@@ -606,12 +553,7 @@ public class TextEditorWindow {
             return codeArea;
         }
 
-        public String getFileName() {
-            return fileName;
-        }
-
-        public void setFileName(String fileName) {
-            this.fileName = fileName;
+        public void setFileName() {
         }
 
         public File getFile() {
@@ -633,28 +575,11 @@ public class TextEditorWindow {
     }
 
     /**
-     * Helper method to extract leading whitespace from a string
-     * Add this method to your TextEditorWindow class
-     */
-    private String extractLeadingWhitespace(String text) {
-        StringBuilder whitespace = new StringBuilder();
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (Character.isWhitespace(c)) {
-                whitespace.append(c);
-            } else {
-                break;
-            }
-        }
-        return whitespace.toString();
-    }
-
-    /**
      * Creates a new tab with an empty editor
      */
-    private Tab createNewTab() {
+    private void createNewTab() {
         String defaultName = "Untitled " + untitledCount++;
-        return createNewTab(defaultName);
+        createNewTab(defaultName);
     }
 
     /**
@@ -662,7 +587,7 @@ public class TextEditorWindow {
      */
     private Tab createNewTab(String fileName) {
         // Create new editor content
-        EditorTab editorTab = new EditorTab(fileName);
+        EditorTab editorTab = new EditorTab();
 
         // Create a tab
         Tab tab = new Tab(fileName);
@@ -729,7 +654,7 @@ public class TextEditorWindow {
             EditorTab editorTab = tabContents.get(tab);
 
             // Update file info
-            editorTab.setFileName(file.getName());
+            editorTab.setFileName();
             editorTab.setFile(file);
 
             // Set content
@@ -765,7 +690,7 @@ public class TextEditorWindow {
 
                 if (file != null) {
                     editorTab.setFile(file);
-                    editorTab.setFileName(file.getName());
+                    editorTab.setFileName();
                     selectedTab.setText(file.getName());
                 } else {
                     return; // Canceled
@@ -811,7 +736,6 @@ public class TextEditorWindow {
             // Now we just update the style without clearing the text
 
             // Update the global font size
-            currentFontSize = fontSize;
 
             // Update the global font size
             currentFontSize = fontSize;
@@ -840,7 +764,7 @@ public class TextEditorWindow {
             }, 3000);
 
             // Ensure the codeArea maintains focus
-            Platform.runLater(() -> codeArea.requestFocus());
+            Platform.runLater(codeArea::requestFocus);
         }
     }
 
@@ -991,9 +915,8 @@ public class TextEditorWindow {
         });
 
         // Add handler to show clipboard history
-        scene.getAccelerators().put(keyCombClipboard, () -> {
-            showClipboardPopup(); // This should be a method that displays your clipboard history
-        });
+        // This should be a method that displays your clipboard history
+        scene.getAccelerators().put(keyCombClipboard, this::showClipboardPopup);
     }
 
     private void showClipboardPopup() {
@@ -1050,7 +973,7 @@ public class TextEditorWindow {
     /**
      * Shows a dialog for finding text in the current document
      */
-    private void initializeFindBar(StackPane stack, Stage stage) {
+    private void initializeFindBar(StackPane stack) {
         searchField = new TextField();
         searchField.setPromptText("Find...");
         searchField.setPrefWidth(200);  // Limit width
@@ -1113,7 +1036,7 @@ public class TextEditorWindow {
     private void findNext(String query) {
         if (query == null || query.isEmpty()) return;
 
-        CodeArea codeArea = getCurrentEditorTab().getCodeArea();
+        CodeArea codeArea = Objects.requireNonNull(getCurrentEditorTab()).getCodeArea();
         String text = codeArea.getText();
         int start = codeArea.getSelection().getEnd();
         int index = text.indexOf(query, start);
@@ -1150,7 +1073,7 @@ public class TextEditorWindow {
     private void findPrevious(String query) {
         if (query == null || query.isEmpty()) return;
 
-        CodeArea codeArea = getCurrentEditorTab().getCodeArea();
+        CodeArea codeArea = Objects.requireNonNull(getCurrentEditorTab()).getCodeArea();
         String text = codeArea.getText();
         int start = codeArea.getSelection().getStart() - 1;
 
