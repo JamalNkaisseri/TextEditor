@@ -312,10 +312,7 @@ public class TextEditorWindow {
                 else if (SUB_ITEM_PATTERN.matcher(line).matches()) {
                     styles.add("sub-item");
                 }
-                // Bullet points (lines starting with -)
-                else if (BULLET_PATTERN.matcher(line).matches()) {
-                    styles.add("bullet-point");
-                }
+
                 // Standalone headers (like "Smart Contract Lifecycle")
                 else if (DASH_HEADER_PATTERN.matcher(trimmedLine).matches() && !trimmedLine.contains(":")) {
                     styles.add("section-header");
