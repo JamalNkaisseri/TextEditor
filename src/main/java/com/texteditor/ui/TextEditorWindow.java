@@ -1025,6 +1025,9 @@ public class TextEditorWindow {
     private void showClipboardPopup() {
         if (clipboardHistory.isEmpty()) return;
 
+        // Store reference to current editor tab before opening popup
+        EditorTab currentEditorTab = getCurrentEditorTab();
+
         ListView<String> listView = new ListView<>();
         listView.getItems().addAll(clipboardHistory);
 
@@ -1044,13 +1047,31 @@ public class TextEditorWindow {
         listView.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 String selected = listView.getSelectionModel().getSelectedItem();
-                if (selected != null) {
-                    EditorTab currentTab = getCurrentEditorTab();
-                    if (currentTab != null) {
-                        CodeArea codeArea = currentTab.getCodeArea();
-                        int caretPos = codeArea.getCaretPosition();
-                        codeArea.insertText(caretPos, selected);
-                    }
+                if (selected != null && currentEditorTab != null) {
+                    CodeArea codeArea = currentEditorTab.getCodeArea();
+                    int caretPos = codeArea.getCaretPosition();
+                    codeArea.insertText(caretPos, selected);
+
+                    // Close the popup first
+                    ((Stage) listView.getScene().getWindow()).close();
+
+                    // Then restore focus and caret visibility with proper timing
+                    Platform.runLater(() -> {
+                        // Request focus on the code area
+                        codeArea.requestFocus();
+
+                        // Force a refresh of the caret by briefly moving it
+                        Platform.runLater(() -> {
+                            int currentPos = codeArea.getCaretPosition();
+                            // Move caret to trigger visual refresh
+                            codeArea.moveTo(currentPos);
+                            // Ensure the area is focused and caret is visible
+                            codeArea.requestFocus();
+                            // Request follow caret to ensure visibility
+                            codeArea.requestFollowCaret();
+                        });
+                    });
+                } else {
                     ((Stage) listView.getScene().getWindow()).close();
                 }
             }
@@ -1066,6 +1087,24 @@ public class TextEditorWindow {
         popupStage.initModality(Modality.APPLICATION_MODAL);
         popupStage.setTitle("Clipboard History");
         popupStage.setScene(scene);
+
+        // Add a close handler to restore focus when popup is closed without selection
+        popupStage.setOnHidden(e -> {
+            if (currentEditorTab != null) {
+                Platform.runLater(() -> {
+                    CodeArea codeArea = currentEditorTab.getCodeArea();
+                    codeArea.requestFocus();
+                    // Force caret refresh
+                    Platform.runLater(() -> {
+                        int currentPos = codeArea.getCaretPosition();
+                        codeArea.moveTo(currentPos);
+                        codeArea.requestFocus();
+                        codeArea.requestFollowCaret();
+                    });
+                });
+            }
+        });
+
         popupStage.showAndWait();
     }
 
