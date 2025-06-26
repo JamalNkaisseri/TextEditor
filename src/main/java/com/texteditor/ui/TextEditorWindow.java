@@ -30,22 +30,25 @@ import static org.fxmisc.richtext.model.TwoDimensional.Bias.Forward;
  * Handles UI creation, styling, and event handling with a tabbed interface.
  */
 public class TextEditorWindow {
-    // Color constants for the dark theme
-    private static final String BACKGROUND_COLOR = "#2D2D2D";         // Dark grey for background
-    private static final String TEXT_COLOR = "#FFFFFF";               // White for text
-    private static final String TAB_SELECTED_COLOR = "#5A5A5A";       // Lighter grey for selected tab
-    private static final String TAB_UNSELECTED_COLOR = "#333333";     // Medium grey for unselected tabs
-    private static final String TAB_HEADER_COLOR = "#2D2D2D";         // Very dark grey for tab header area
-    private static final String SCROLLBAR_THUMB_COLOR = "#666666";    // Grey for scrollbar thumb
-    private static final String SCROLLBAR_TRACK_COLOR = "#3A3A3A";    // Darker grey for scrollbar track
-    private static final String CURSOR_COLOR = "#FFA500";             // Orange for cursor
-    private static final String CURRENT_LINE_COLOR = "#383838";       // Slightly lighter than background for current line
 
-    // Header and formatting colors
-    private static final String MAIN_HEADER_COLOR = "#4A9EFF";      // Blue for main headers
-    private static final String SUB_ITEM_COLOR = "#5CB85C";          // Green for a), b), c) items
-    private static final String BULLET_COLOR = "#888888";            // Grey for bullet points
-    private static final String IMPORTANT_COLOR = "#FF6B35";         // Orange for emphasis
+    // Replace your existing color constants with these:
+    private static final String BACKGROUND_COLOR = "#1E1E2E";         // Dark purple background
+    private static final String TEXT_COLOR = "#E0E0E0";               // Soft white text
+    private static final String TAB_SELECTED_COLOR = "#2A2A3A";       // Slightly lighter purple
+    private static final String TAB_UNSELECTED_COLOR = "#252535";     // Dark purple for tabs
+    private static final String TAB_HEADER_COLOR = "#1E1E2E";         // Dark purple header
+    private static final String SCROLLBAR_THUMB_COLOR = "#6D5D8C";    // Purple-grey scrollbar
+    private static final String SCROLLBAR_TRACK_COLOR = "#2A2A3A";    // Dark purple track
+    private static final String CURSOR_COLOR = "#BB86FC";             // Light purple cursor
+    private static final String CURRENT_LINE_COLOR = "#2A2A3A";       // Current line highlight
+
+    // Purple-themed accent colors
+    private static final String MAIN_HEADER_COLOR = "#BB86FC";        // Light purple headers
+    private static final String SUB_ITEM_COLOR = "#03DAC6";           // Teal for sub-items
+    private static final String BULLET_COLOR = "#888888";             // Grey bullets
+    private static final String IMPORTANT_COLOR = "#FF79C6";          // Pink emphasis
+    private static final String HIGHLIGHT_COLOR = "#6D3D8C";          // Purple selection
+    private static final String FIND_BAR_COLOR = "#2A2A3A";           // Find bar color
 
     // Regex patterns for auto-styling
     private static final Pattern MAIN_HEADER_PATTERN = Pattern.compile("^.+:$");  // Lines ending with :
@@ -90,9 +93,14 @@ public class TextEditorWindow {
 
         // Create status bar for cursor position
         statusLabel = new Label("Line: 1, Column: 1");
-        statusLabel.setPadding(new Insets(3, 10, 3, 10));
-        statusLabel.setStyle("-fx-background-color: #333333; -fx-text-fill: #BBBBBB;");
-
+        statusLabel.setStyle(
+                "-fx-background-color: #2A2A3A;" +
+                        "-fx-text-fill: #BBBBBB;" +
+                        "-fx-font-size: 12px;" +
+                        "-fx-padding: 5px 15px;" +
+                        "-fx-border-width: 1px 0 0 0;" +
+                        "-fx-border-color: #3D3D4D;"
+        );
         // Create the root layout container
         BorderPane root = new BorderPane();
         root.setCenter(tabPane);
@@ -331,13 +339,10 @@ public class TextEditorWindow {
         }
     }
 
-    /**
-     * Apply custom CSS styles to the scene
-     */
+
     private void applyCustomStyles(Scene scene) {
-        // Basic scrollbar styling for the CodeArea
+        // Basic scrollbar and editor styling
         String customStyles =
-                // Basic scrollbar styling for the CodeArea
                 ".virtual-flow .scroll-bar:vertical {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "    -fx-opacity: 1.0;" +
@@ -356,7 +361,6 @@ public class TextEditorWindow {
                         "    -fx-background-color: " + SCROLLBAR_TRACK_COLOR + ";" +
                         "    -fx-background-radius: 0;" +
                         "}" +
-                        // Hide increment and decrement buttons for a cleaner look
                         ".virtual-flow .scroll-bar:vertical .increment-button," +
                         ".virtual-flow .scroll-bar:vertical .decrement-button {" +
                         "    -fx-opacity: 0;" +
@@ -364,7 +368,6 @@ public class TextEditorWindow {
                         "    -fx-min-height: 0;" +
                         "    -fx-max-height: 0;" +
                         "}" +
-                        // Hide the arrow icons
                         ".virtual-flow .scroll-bar:vertical .increment-arrow," +
                         ".virtual-flow .scroll-bar:vertical .decrement-arrow {" +
                         "    -fx-opacity: 0;" +
@@ -372,40 +375,32 @@ public class TextEditorWindow {
                         "    -fx-min-height: 0;" +
                         "    -fx-max-height: 0;" +
                         "}" +
-                        // Line numbers styling
                         ".lineno {" +
-                        "    -fx-background-color: #3D3D3D;" +
+                        "    -fx-background-color: #3D3D4D;" +
                         "    -fx-text-fill: #888888;" +
                         "}" +
-                        // Selection styling
                         ".styled-text-area .selection {" +
-                        "    -fx-fill: #214283;" +
+                        "    -fx-fill: " + HIGHLIGHT_COLOR + ";" +
                         "}" +
-                        // Base colors for the code area
                         ".styled-text-area {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "}" +
                         ".styled-text-area .text {" +
                         "    -fx-fill: " + TEXT_COLOR + ";" +
                         "}" +
-                        // Enhanced caret styling for better visibility
                         ".styled-text-area .caret {" +
                         "    -fx-stroke-width: 2.0;" +
                         "    -fx-stroke: " + CURSOR_COLOR + ";" +
                         "}" +
-                        // Current line highlighting
                         ".styled-text-area .current-line {" +
                         "    -fx-background-color: " + CURRENT_LINE_COLOR + ";" +
                         "}" +
-                        // Fix for white scroll pane background
                         ".scroll-pane, .scroll-pane > .viewport {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "}" +
-                        // Fix for virtualized scroll pane (RichTextFX specific)
                         ".virtualized-scroll-pane {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "}" +
-                        // Fix for horizontal scrollbar
                         ".virtual-flow .scroll-bar:horizontal," +
                         ".scroll-bar:horizontal {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
@@ -422,7 +417,6 @@ public class TextEditorWindow {
                         "    -fx-background-color: " + SCROLLBAR_TRACK_COLOR + ";" +
                         "    -fx-background-radius: 0;" +
                         "}" +
-                        // Auto-styling for note formatting
                         ".styled-text-area .main-header {" +
                         "    -fx-fill: " + MAIN_HEADER_COLOR + ";" +
                         "    -fx-font-weight: bold;" +
@@ -451,7 +445,6 @@ public class TextEditorWindow {
                         ".tab-pane .tab-header-area {" +
                         "    -fx-padding: 0px;" +
                         "}" +
-                        // General tab style with focus colors disabled
                         ".tab-pane .tab {" +
                         "    -fx-focus-color: transparent;" +
                         "    -fx-faint-focus-color: transparent;" +
@@ -459,17 +452,17 @@ public class TextEditorWindow {
                         ".tab-pane > .tab-header-area > .headers-region > .tab {" +
                         "    -fx-background-color: " + TAB_UNSELECTED_COLOR + ";" +
                         "    -fx-background-radius: 0;" +
-                        "    -fx-padding: 3px 15px 3px 15px;" + // Compact padding
-                        "    -fx-pref-width: 200px;" + // Fixed width tabs
+                        "    -fx-padding: 8px 15px;" +
+                        "    -fx-pref-width: 200px;" +
                         "    -fx-max-width: 200px;" +
                         "    -fx-min-width: 150px;" +
                         "}" +
                         ".tab-pane > .tab-header-area > .headers-region > .tab:selected {" +
                         "    -fx-background-color: " + TAB_SELECTED_COLOR + ";" +
-                        "    -fx-border-width: 0 0 2 0;" +
-                        "    -fx-border-color: " + CURSOR_COLOR + ";" + // Orange indicator for selected tab
-                        "    -fx-focus-color: transparent;" + // Disable focus highlight
-                        "    -fx-faint-focus-color: transparent;" + // Also disable the faint variant
+                        "    -fx-border-width: 0 0 2px 0;" +
+                        "    -fx-border-color: " + CURSOR_COLOR + ";" +
+                        "    -fx-focus-color: transparent;" +
+                        "    -fx-faint-focus-color: transparent;" +
                         "}" +
                         ".tab-pane .tab .tab-label {" +
                         "    -fx-text-fill: #CCCCCC;" +
@@ -478,20 +471,17 @@ public class TextEditorWindow {
                         ".tab-pane .tab:selected .tab-label {" +
                         "    -fx-text-fill: #FFFFFF;" +
                         "}" +
-                        // Clean, subtle close button
                         ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-close-button {" +
                         "    -fx-background-color: #CCCCCC;" +
                         "    -fx-shape: \"M 0,0 H1 L 4,3 7,0 H8 V1 L 5,4 8,7 V8 H7 L 4,5 1,8 H0 V7 L 3,4 0,1 Z\";" +
                         "    -fx-scale-shape: false;" +
                         "}" +
-                        // Fix for tab content area
                         ".tab-pane > .tab-content-area {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "}";
 
         // Root style to ensure all parts of the application use dark theme
         String rootStyle =
-                // Style for the root BorderPane and Scene
                 ".root {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "    -fx-base: " + BACKGROUND_COLOR + ";" +
@@ -499,12 +489,11 @@ public class TextEditorWindow {
 
         // Add dialog styling
         String dialogStyle =
-                // Style for dialog boxes
                 ".dialog-pane {" +
                         "    -fx-background-color: " + BACKGROUND_COLOR + ";" +
                         "}" +
                         ".dialog-pane .header-panel {" +
-                        "    -fx-background-color: #3D3D3D;" +
+                        "    -fx-background-color: #3D3D4D;" +
                         "}" +
                         ".dialog-pane .header-panel .label {" +
                         "    -fx-text-fill: " + TEXT_COLOR + ";" +
@@ -513,13 +502,13 @@ public class TextEditorWindow {
                         "    -fx-text-fill: " + TEXT_COLOR + ";" +
                         "}" +
                         ".dialog-pane .button {" +
-                        "    -fx-background-color: #444444;" +
+                        "    -fx-background-color: #444455;" +
                         "    -fx-text-fill: " + TEXT_COLOR + ";" +
-                        "    -fx-border-color: #666666;" +
+                        "    -fx-border-color: #666677;" +
                         "    -fx-border-radius: 3px;" +
                         "}" +
                         ".dialog-pane .button:hover {" +
-                        "    -fx-background-color: #555555;" +
+                        "    -fx-background-color: #555566;" +
                         "}" +
                         ".dialog-pane:header .header-panel .label {" +
                         "    -fx-font-size: 16px;" +
@@ -533,7 +522,6 @@ public class TextEditorWindow {
         scene.getStylesheets().add("data:text/css," + encodeCSS(rootStyle));
         scene.getStylesheets().add("data:text/css," + encodeCSS(dialogStyle));
     }
-
     /**
      * Helper method to properly encode CSS for data URLs
      */
@@ -588,12 +576,14 @@ public class TextEditorWindow {
             // Add explicit mouse click handler to ensure focus
             codeArea.setOnMouseClicked(event -> codeArea.requestFocus());
 
-            // Apply styling with the current font size
+            // Update the code area styling:
             codeArea.setStyle(
                     "-fx-background-color: " + BACKGROUND_COLOR + ";" +
-                            "-fx-font-family: 'Monospace';" +
+                            "-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace;" +
                             "-fx-font-size: " + currentFontSize + "px;" +
-                            "-fx-text-fill: " + TEXT_COLOR + ";"
+                            "-fx-text-fill: " + TEXT_COLOR + ";" +
+                            "-fx-font-smoothing-type: lcd;" +
+                            "-fx-padding: 10px;"
             );
 
             // Enable word wrap for note-taking
@@ -1118,21 +1108,60 @@ public class TextEditorWindow {
     private void initializeFindBar(StackPane stack) {
         searchField = new TextField();
         searchField.setPromptText("Find...");
-        searchField.setPrefWidth(200);  // Limit width
+        searchField.setPrefWidth(250);  // Slightly wider for better usability
         searchField.setStyle(
-                "-fx-background-color: #222; -fx-text-fill: #DDD; -fx-prompt-text-fill: #888; " +
-                        "-fx-border-color: #444; -fx-border-radius: 4px; -fx-background-radius: 4px;"
+                "-fx-background-color: #3A3A4A;" +
+                        "-fx-text-fill: #E0E0E0;" +
+                        "-fx-prompt-text-fill: #8888AA;" +
+                        "-fx-border-color: #4D4D6D;" +
+                        "-fx-border-radius: 4px;" +
+                        "-fx-background-radius: 4px;" +
+                        "-fx-padding: 5px 8px;" +
+                        "-fx-font-family: 'Segoe UI', sans-serif;" +
+                        "-fx-font-size: 13px;"
         );
 
         Button closeBtn = new Button("✕");
-        closeBtn.setOnAction(e -> findBar.setVisible(false));
-        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CCC;");
+        closeBtn.setOnAction(e -> {
+            findBar.setVisible(false);
+            EditorTab currentTab = getCurrentEditorTab();
+            if (currentTab != null) {
+                currentTab.getCodeArea().requestFocus();
+            }
+        });
+        closeBtn.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-text-fill: #BB86FC;" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-padding: 5px 8px;" +
+                        "-fx-cursor: hand;"
+        );
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #3A3A5A; -fx-text-fill: #FF79C6;"));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #BB86FC;"));
 
         Button nextBtn = new Button("↓");
-        nextBtn.setStyle("-fx-background-color: #333; -fx-text-fill: #CCC; -fx-background-radius: 3;");
+        nextBtn.setStyle(
+                "-fx-background-color: #4A4A6A;" +
+                        "-fx-text-fill: #E0E0E0;" +
+                        "-fx-background-radius: 3px;" +
+                        "-fx-padding: 5px 10px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-cursor: hand;"
+        );
+        nextBtn.setOnMouseEntered(e -> nextBtn.setStyle("-fx-background-color: #5A5A7A; -fx-text-fill: #FFFFFF;"));
+        nextBtn.setOnMouseExited(e -> nextBtn.setStyle("-fx-background-color: #4A4A6A; -fx-text-fill: #E0E0E0;"));
 
         Button prevBtn = new Button("↑");
-        prevBtn.setStyle("-fx-background-color: #333; -fx-text-fill: #CCC; -fx-background-radius: 3;");
+        prevBtn.setStyle(
+                "-fx-background-color: #4A4A6A;" +
+                        "-fx-text-fill: #E0E0E0;" +
+                        "-fx-background-radius: 3px;" +
+                        "-fx-padding: 5px 10px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-cursor: hand;"
+        );
+        prevBtn.setOnMouseEntered(e -> prevBtn.setStyle("-fx-background-color: #5A5A7A; -fx-text-fill: #FFFFFF;"));
+        prevBtn.setOnMouseExited(e -> prevBtn.setStyle("-fx-background-color: #4A4A6A; -fx-text-fill: #E0E0E0;"));
 
         // Setup search navigation buttons
         nextBtn.setOnAction(e -> findNext(searchField.getText()));
@@ -1140,12 +1169,17 @@ public class TextEditorWindow {
 
         findBar = new HBox(5, searchField, prevBtn, nextBtn, closeBtn);
         findBar.setPadding(new Insets(5));
-        findBar.setMaxHeight(35);  // Constrain height
-        findBar.setMaxWidth(Region.USE_PREF_SIZE);  // Use preferred size for width
-        findBar.setStyle("-fx-background-color: #2a2a2a; -fx-border-color: #555; " +
-                "-fx-border-radius: 3; -fx-background-radius: 3; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 0, 2);");
+        findBar.setMaxHeight(40);  // Slightly taller
+        findBar.setMaxWidth(Region.USE_PREF_SIZE);
+        findBar.setStyle(
+                "-fx-background-color: #2A2A3A;" +
+                        "-fx-border-color: #3D3D5D;" +
+                        "-fx-border-width: 0 0 1px 0;" +
+                        "-fx-background-radius: 0;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 5, 0, 0, 1);"
+        );
         findBar.setAlignment(Pos.CENTER_LEFT);
-        findBar.setVisible(false); // Initially hidden
+        findBar.setVisible(false);
 
         // Position in top-right with proper margins
         StackPane.setAlignment(findBar, Pos.TOP_RIGHT);
@@ -1153,8 +1187,6 @@ public class TextEditorWindow {
 
         // Add to stack pane on top of the content
         stack.getChildren().add(findBar);
-
-        // Ensure the find bar is on top
         findBar.toFront();
 
         // Handle search logic on Enter key
@@ -1164,12 +1196,22 @@ public class TextEditorWindow {
         searchField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 findBar.setVisible(false);
-                // Return focus to editor
                 EditorTab currentTab = getCurrentEditorTab();
                 if (currentTab != null) {
                     currentTab.getCodeArea().requestFocus();
                 }
                 event.consume();
+            }
+        });
+
+        // Add listener to show/hide find bar
+        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.isEmpty()) {
+                searchField.setStyle(
+                        "-fx-background-color: #3A3A4A;" +
+                                "-fx-text-fill: #E0E0E0;" +
+                                "-fx-border-color: #4D4D6D;"
+                );
             }
         });
     }
