@@ -65,3 +65,43 @@
     -fx-font-size: 13px;
     -fx-padding: 4px 4px;
 }
+
+/* === Scrollbar Styling === */
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: #1E1E2E;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #3A3A4A;
+    -fx-background-insets: 2;
+    -fx-background-radius: 5;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #505060;
+}
+
+.scroll-bar .track {
+    -fx-background-color: #1E1E2E;
+    -fx-background-insets: 0;
+    -fx-background-radius: 5;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 4;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: " ";
+    -fx-background-color: transparent;
+}
