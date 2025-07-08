@@ -1,8 +1,9 @@
-/* dark-theme.css */
+/* ====== Global Background ====== */
 .root {
     -fx-background-color: #1E1E2E;
 }
 
+/* ====== Code Area Styling ====== */
 .styled-text-area {
     -fx-background-color: transparent;
 }
@@ -15,14 +16,52 @@
     -fx-fill: #BB86FC;
 }
 
+.styled-text-area .caret {
+    -fx-stroke: #FF79C6;
+    -fx-stroke-width: 2px;
+}
+
+/* ====== Line Number Styling ====== */
 .label.line-number {
     -fx-text-fill: #E0E0E0;
     -fx-background-color: #1E1E2E;
     -fx-padding: 0 10 0 10;
 }
 
-.styled-text-area .caret {
-    -fx-stroke: #FF79C6;
-    -fx-stroke-width: 2px;
+/* ====== TabPane Styling ====== */
+.tab-pane {
+    -fx-background-color: #1E1E2E;
 }
 
+.tab-pane:focused,
+.tab-pane .tab:selected:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tab-pane .tab-header-area {
+    -fx-background-color: #1E1E2E;
+    -fx-border-color: transparent;
+    -fx-padding: 4px 0;
+}
+
+.tab-pane .tab-header-background {
+    -fx-background-color: #1E1E2E;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #252535;
+    -fx-padding: 10px 15px;
+    -fx-text-base-color: #E0E0E0;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #2A2A3A;
+    -fx-text-base-color: #E0E0E0;
+}
+
+.tab-pane .tab-label {
+    -fx-text-fill: #E0E0E0;
+    -fx-font-size: 13px;
+    -fx-padding: 4px 4px;
+}
