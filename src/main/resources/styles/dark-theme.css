@@ -1,0 +1,28 @@
+/* dark-theme.css */
+.root {
+    -fx-background-color: #1E1E2E;
+}
+
+.styled-text-area {
+    -fx-background-color: transparent;
+}
+
+.styled-text-area .text {
+    -fx-fill: #E0E0E0;
+}
+
+.styled-text-area .selection {
+    -fx-fill: #BB86FC;
+}
+
+.label.line-number {
+    -fx-text-fill: #E0E0E0;
+    -fx-background-color: #1E1E2E;
+    -fx-padding: 0 10 0 10;
+}
+
+.styled-text-area .caret {
+    -fx-stroke: #FF79C6;
+    -fx-stroke-width: 2px;
+}
+
