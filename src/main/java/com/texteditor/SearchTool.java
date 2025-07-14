@@ -1,3 +1,5 @@
+package com.texteditor;
+
 import javafx.application.Platform;
 import javafx.scene.control.TextField;
 import org.fxmisc.richtext.CodeArea;

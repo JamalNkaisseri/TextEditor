@@ -1,3 +1,5 @@
+package com.texteditor;
+
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;

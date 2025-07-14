@@ -1,3 +1,5 @@
+package com.texteditor;
+
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.scene.control.Tab;
@@ -45,7 +47,7 @@ public class FileManager {
                 fileMap.put(currentTab, path);
                 currentTab.setText(path.getFileName().toString()); // Remove dirty marker
 
-                // Update the original content in TabManager
+                // Update the original content in com.texteditor.TabManager
                 tabManager.updateOriginalContent(currentTab, content);
                 return true; // Save successful
             } catch (IOException e) {
@@ -82,7 +84,7 @@ public class FileManager {
                 currentTab.setText(title.substring(1));
             }
 
-            // Update the original content in TabManager
+            // Update the original content in com.texteditor.TabManager
             tabManager.updateOriginalContent(currentTab, content);
             return true; // Save successful
         } catch (IOException e) {

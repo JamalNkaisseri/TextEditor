@@ -1,3 +1,5 @@
+package com.texteditor;
+
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;

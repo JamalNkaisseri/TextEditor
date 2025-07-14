@@ -1,3 +1,5 @@
+package com.texteditor;
+
 public class ThemeManager {
     public static final String BACKGROUND_COLOR = "#1E1E2E";
     public static final String TEXT_COLOR = "#E0E0E0";

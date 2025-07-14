@@ -1,3 +1,5 @@
+package com.texteditor;
+
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -278,7 +280,7 @@ public class TextEditorWindow {
                     return false;
                 }
 
-                // Update the original content in TabManager
+                // Update the original content in com.texteditor.TabManager
                 CodeArea codeArea = tabManager.getCurrentCodeArea();
                 if (codeArea != null) {
                     tabManager.updateOriginalContent(dirtyTab, codeArea.getText());
