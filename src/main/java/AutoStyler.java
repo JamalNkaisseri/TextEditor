@@ -8,7 +8,8 @@ public class AutoStyler {
 
     private static final Pattern MAIN_HEADER = Pattern.compile("^[A-Z].+:\\s*$");
     private static final Pattern TITLE_LINE = Pattern.compile("^[A-Z][^:]+$");
-    private static final Pattern LIST_ITEM = Pattern.compile("^\\s*[a-z]\\)\\s+.+");
+    // Fixed: More flexible list item pattern
+    private static final Pattern LIST_ITEM = Pattern.compile("^\\s*[a-z]\\)\\s*.*");
 
     private static final long DEBOUNCE_DELAY_MS = 300;
     private Timer debounceTimer;

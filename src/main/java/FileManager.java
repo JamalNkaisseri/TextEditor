@@ -21,11 +21,12 @@ public class FileManager {
 
     /**
      * Opens a Save As dialog and saves content to a new file (any type).
+     * @return true if file was saved successfully, false if cancelled or failed
      */
-    public void saveFileAs(TabManager tabManager) {
+    public boolean saveFileAs(TabManager tabManager) {
         Tab currentTab = tabManager.getTabPane().getSelectionModel().getSelectedItem();
         CodeArea area = tabManager.getCurrentCodeArea();
-        if (currentTab == null || area == null) return;
+        if (currentTab == null || area == null) return false; // Fixed: added return value
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save File As");
@@ -38,36 +39,56 @@ public class FileManager {
         if (file != null) {
             Path path = file.toPath();
             try {
-                Files.writeString(path, area.getText());
+                String content = area.getText();
+                Files.writeString(path, content);
 
                 fileMap.put(currentTab, path);
                 currentTab.setText(path.getFileName().toString()); // Remove dirty marker
+
+                // Update the original content in TabManager
+                tabManager.updateOriginalContent(currentTab, content);
+                return true; // Save successful
             } catch (IOException e) {
                 e.printStackTrace();
+                // TODO: Show error dialog to user
+                return false; // Save failed
             }
         }
+        return false; // User cancelled
     }
 
     /**
      * Saves the current file if it has a known path, otherwise falls back to Save As.
+     * @return true if file was saved successfully, false if cancelled or failed
      */
-    public void saveFile(TabManager tabManager) {
+    public boolean saveFile(TabManager tabManager) {
         Tab currentTab = tabManager.getTabPane().getSelectionModel().getSelectedItem();
         CodeArea area = tabManager.getCurrentCodeArea();
-        if (currentTab == null || area == null) return;
+        if (currentTab == null || area == null) return false; // Fixed: added return value
 
         Path path = fileMap.get(currentTab);
 
         if (path == null) {
-            saveFileAs(tabManager); // First-time save
-            return;
+            return saveFileAs(tabManager); // First-time save - return result
         }
 
         try {
-            Files.writeString(path, area.getText());
-            currentTab.setText(path.getFileName().toString()); // Clean tab title
+            String content = area.getText();
+            Files.writeString(path, content);
+
+            // Clean the tab title (remove * prefix)
+            String title = currentTab.getText();
+            if (title.startsWith("*")) {
+                currentTab.setText(title.substring(1));
+            }
+
+            // Update the original content in TabManager
+            tabManager.updateOriginalContent(currentTab, content);
+            return true; // Save successful
         } catch (IOException e) {
             e.printStackTrace();
+            // TODO: Show error dialog to user
+            return false; // Save failed
         }
     }
 
@@ -78,5 +99,39 @@ public class FileManager {
         if (!tab.getText().startsWith("*")) {
             tab.setText("*" + tab.getText());
         }
+    }
+
+    public void openFile(TabManager tabManager) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open File");
+        fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        File file = fileChooser.showOpenDialog(stage);
+        if (file != null) {
+            try {
+                String content = Files.readString(file.toPath());
+                Tab tab = tabManager.createNewTabWithContent(content, file.getName());
+                fileMap.put(tab, file.toPath());
+            } catch (IOException e) {
+                e.printStackTrace(); // TODO: Show error dialog to user
+            }
+        }
+    }
+
+    /**
+     * Gets the file path associated with a tab
+     */
+    public Path getFilePath(Tab tab) {
+        return fileMap.get(tab);
+    }
+
+    /**
+     * Checks if a tab has an associated file
+     */
+    public boolean hasFile(Tab tab) {
+        return fileMap.containsKey(tab);
     }
 }

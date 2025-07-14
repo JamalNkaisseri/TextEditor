@@ -42,32 +42,44 @@ public class TextEditorWindow {
         Scene scene = new Scene(root, 800, 600);
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/dark-theme.css")).toExternalForm());
 
-        // Tab and file managers
-        tabManager = new TabManager(scene);
+        // Tab and file managers - Fixed parameter order
         fileManager = new FileManager(stage);
+        tabManager = new TabManager(scene, stage, fileManager); // ✅ Corrected parameter order
+
         root.setCenter(tabManager.getTabPane());
 
         // Setup search bar
-        CodeArea codeArea = tabManager.getCurrentCodeArea();
         searchBar = new SearchBar();
         searchBar.setVisible(false);
         BorderPane.setMargin(searchBar, new Insets(5));
         root.setTop(searchBar);
 
-        if (codeArea != null) {
-            searchTool = new SearchTool(codeArea, searchBar.getSearchField());
-        }
+        // Initialize search tool with current code area
+        updateSearchTool();
 
         searchBar.setOnClose(() -> searchBar.setVisible(false));
-        searchBar.getSearchField().setOnAction(e -> searchTool.findNext());
-        searchBar.getNextButton().setOnAction(e -> searchTool.findNext());
-        searchBar.getPrevButton().setOnAction(e -> searchTool.findPrevious());
+        searchBar.getSearchField().setOnAction(e -> {
+            if (searchTool != null) searchTool.findNext();
+        });
+        searchBar.getNextButton().setOnAction(e -> {
+            if (searchTool != null) searchTool.findNext();
+        });
+        searchBar.getPrevButton().setOnAction(e -> {
+            if (searchTool != null) searchTool.findPrevious();
+        });
 
         // Register all shortcuts
         registerShortcuts(scene);
 
         // Setup caret and tab tracking
         setupTracking();
+
+        // Handle application close event
+        stage.setOnCloseRequest(e -> {
+            if (!handleApplicationClose()) {
+                e.consume(); // Prevent closing if user cancels
+            }
+        });
 
         // Show editor
         stage.setTitle("TrickyTeta");
@@ -113,13 +125,15 @@ public class TextEditorWindow {
 
         manager.register(ShortcutManager.SAVE_FILE, () -> fileManager.saveFile(tabManager));
         manager.register(ShortcutManager.SAVE_AS_FILE, () -> fileManager.saveFileAs(tabManager));
-        manager.register(ShortcutManager.EXIT_APP, Platform::exit);
+        manager.register(ShortcutManager.EXIT_APP, this::handleApplicationExit);
 
         // Ctrl+F to open search bar
         manager.register(KeyCombination.valueOf("Ctrl+F"), () -> {
             searchBar.setVisible(true);
             searchBar.focusField();
         });
+
+        manager.register(ShortcutManager.OPEN_FILE, () -> fileManager.openFile(tabManager));
 
         manager.attachTo(scene);
     }
@@ -153,16 +167,44 @@ public class TextEditorWindow {
         }
     }
 
+    private void updateSearchTool() {
+        CodeArea codeArea = tabManager.getCurrentCodeArea();
+        if (codeArea != null) {
+            searchTool = new SearchTool(codeArea, searchBar.getSearchField());
+        }
+    }
+
     private void setupTracking() {
-        if (tabManager.getCurrentCodeArea() != null) {
-            bindCodeArea(tabManager.getCurrentCodeArea(), tabManager.getTabPane().getSelectionModel().getSelectedItem());
+        CodeArea currentArea = tabManager.getCurrentCodeArea();
+        if (currentArea != null) {
+            bindCodeArea(currentArea, tabManager.getTabPane().getSelectionModel().getSelectedItem());
         }
 
+        // Listen for tab changes
         tabManager.getTabPane().getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             CodeArea newArea = tabManager.getCurrentCodeArea();
             if (newArea != null) {
                 bindCodeArea(newArea, newTab);
                 updateStatusBar(newArea);
+                updateSearchTool(); // Update search tool for new tab
+                applyFontSize(newArea); // Apply current font size to new tab
+            }
+        });
+
+        // Listen for new tabs being added
+        tabManager.getTabPane().getTabs().addListener((javafx.collections.ListChangeListener<Tab>) change -> {
+            while (change.next()) {
+                if (change.wasAdded()) {
+                    for (Tab addedTab : change.getAddedSubList()) {
+                        // Apply font size to newly created tabs
+                        Platform.runLater(() -> {
+                            CodeArea area = tabManager.getCurrentCodeArea();
+                            if (area != null && tabManager.getTabPane().getSelectionModel().getSelectedItem() == addedTab) {
+                                applyFontSize(area);
+                            }
+                        });
+                    }
+                }
             }
         });
     }
@@ -172,11 +214,83 @@ public class TextEditorWindow {
         styler.bindTo(codeArea);
 
         codeArea.caretPositionProperty().addListener((obs, oldVal, newVal) -> updateStatusBar(codeArea));
+
+        // Apply current font size to this code area
+        applyFontSize(codeArea);
+    }
+
+    private void applyFontSize(CodeArea codeArea) {
+        if (codeArea != null) {
+            codeArea.setStyle("-fx-font-size: " + fontSize + "px;");
+        }
     }
 
     private void updateStatusBar(CodeArea codeArea) {
-        int line = codeArea.getCurrentParagraph() + 1;
-        int column = codeArea.getCaretColumn() + 1;
-        statusLabel.setText("Line: " + line + ", Column: " + column);
+        if (codeArea != null) {
+            int line = codeArea.getCurrentParagraph() + 1;
+            int column = codeArea.getCaretColumn() + 1;
+            statusLabel.setText("Line: " + line + ", Column: " + column);
+        }
+    }
+
+    /**
+     * Handles application exit (Ctrl+Q) - checks all tabs for unsaved changes
+     */
+    private void handleApplicationExit() {
+        if (handleApplicationClose()) {
+            Platform.exit();
+        }
+    }
+
+    /**
+     * Checks all tabs for unsaved changes and prompts user for each dirty tab
+     * @return true if it's safe to close the application, false if user cancelled
+     */
+    private boolean handleApplicationClose() {
+        List<Tab> dirtyTabs = new ArrayList<>();
+
+        // Find all tabs with unsaved changes
+        for (Tab tab : tabManager.getTabPane().getTabs()) {
+            if (tab.getText().startsWith("*")) {
+                dirtyTabs.add(tab);
+            }
+        }
+
+        // If no dirty tabs, it's safe to close
+        if (dirtyTabs.isEmpty()) {
+            return true;
+        }
+
+        // Process each dirty tab
+        for (Tab dirtyTab : dirtyTabs) {
+            // Select the tab so user can see which file they're being asked about
+            tabManager.getTabPane().getSelectionModel().select(dirtyTab);
+
+            String cleanTitle = dirtyTab.getText().substring(1); // Remove the * prefix
+            UnsavedChangesDialog.Result result = UnsavedChangesDialog.show(cleanTitle,
+                    (Stage) tabManager.getTabPane().getScene().getWindow());
+
+            if (result == UnsavedChangesDialog.Result.SAVE) {
+                // Save the file and check if it was successful
+                boolean saveSuccess = fileManager.saveFile(tabManager);
+                if (!saveSuccess) {
+                    // User cancelled the save dialog or save failed
+                    return false;
+                }
+
+                // Update the original content in TabManager
+                CodeArea codeArea = tabManager.getCurrentCodeArea();
+                if (codeArea != null) {
+                    tabManager.updateOriginalContent(dirtyTab, codeArea.getText());
+                }
+            } else if (result == UnsavedChangesDialog.Result.CANCEL) {
+                // User cancelled, don't close the application
+                return false;
+            }
+            // If DONT_SAVE, continue to next tab
+        }
+
+        // All tabs processed successfully
+        return true;
     }
 }
