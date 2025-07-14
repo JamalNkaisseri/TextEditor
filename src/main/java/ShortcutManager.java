@@ -46,4 +46,7 @@ public class ShortcutManager {
     public static final KeyCombination INCREASE_FONT_EQUALS = new KeyCodeCombination(KeyCode.EQUALS, KeyCombination.CONTROL_DOWN);
     public static final KeyCombination DECREASE_FONT = new KeyCodeCombination(KeyCode.MINUS, KeyCombination.CONTROL_DOWN);
     public static final KeyCombination RESET_FONT = new KeyCodeCombination(KeyCode.DIGIT0, KeyCombination.CONTROL_DOWN);
+
+    // Search
+    public static final KeyCombination SEARCH = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 }

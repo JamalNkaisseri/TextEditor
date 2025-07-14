@@ -1,7 +1,9 @@
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import org.fxmisc.richtext.CodeArea;
@@ -16,7 +18,10 @@ public class TextEditorWindow {
     private TabManager tabManager;
     private FileManager fileManager;
     private final List<String> clipboardHistory = new ArrayList<>();
-    private double fontSize = 14; // Default font size
+    private double fontSize = 14;
+
+    private SearchBar searchBar;
+    private SearchTool searchTool;
 
     public void start(Stage stage) {
         BorderPane root = new BorderPane();
@@ -42,6 +47,22 @@ public class TextEditorWindow {
         fileManager = new FileManager(stage);
         root.setCenter(tabManager.getTabPane());
 
+        // Setup search bar
+        CodeArea codeArea = tabManager.getCurrentCodeArea();
+        searchBar = new SearchBar();
+        searchBar.setVisible(false);
+        BorderPane.setMargin(searchBar, new Insets(5));
+        root.setTop(searchBar);
+
+        if (codeArea != null) {
+            searchTool = new SearchTool(codeArea, searchBar.getSearchField());
+        }
+
+        searchBar.setOnClose(() -> searchBar.setVisible(false));
+        searchBar.getSearchField().setOnAction(e -> searchTool.findNext());
+        searchBar.getNextButton().setOnAction(e -> searchTool.findNext());
+        searchBar.getPrevButton().setOnAction(e -> searchTool.findPrevious());
+
         // Register all shortcuts
         registerShortcuts(scene);
 
@@ -57,7 +78,6 @@ public class TextEditorWindow {
     private void registerShortcuts(Scene scene) {
         ShortcutManager manager = new ShortcutManager();
 
-        // CUT - Ctrl+X
         manager.register(ShortcutManager.CUT, () -> {
             CodeArea area = tabManager.getCurrentCodeArea();
             if (area != null) {
@@ -67,7 +87,6 @@ public class TextEditorWindow {
             }
         });
 
-        // COPY - Ctrl+C
         manager.register(ShortcutManager.COPY, () -> {
             CodeArea area = tabManager.getCurrentCodeArea();
             if (area != null) {
@@ -77,36 +96,30 @@ public class TextEditorWindow {
             }
         });
 
-        // PASTE - Ctrl+V
         manager.register(ShortcutManager.PASTE, () -> {
             CodeArea area = tabManager.getCurrentCodeArea();
             if (area != null) area.paste();
         });
 
-        // CLIPBOARD HISTORY POPUP - Ctrl+Shift+V
         manager.register(ShortcutManager.SHOW_CLIPBOARD_HISTORY, () -> {
             CodeArea area = tabManager.getCurrentCodeArea();
             if (area != null) ClipboardPopup.show(clipboardHistory, area);
         });
 
-        // FONT SIZE: Increase (Ctrl + / =)
         manager.register(ShortcutManager.INCREASE_FONT_PLUS, this::increaseFontSize);
         manager.register(ShortcutManager.INCREASE_FONT_EQUALS, this::increaseFontSize);
-
-        // FONT SIZE: Decrease (Ctrl -)
         manager.register(ShortcutManager.DECREASE_FONT, this::decreaseFontSize);
-
-        // FONT SIZE: Reset (Ctrl 0)
         manager.register(ShortcutManager.RESET_FONT, this::resetFontSize);
 
-        // SAVE - Ctrl+S
         manager.register(ShortcutManager.SAVE_FILE, () -> fileManager.saveFile(tabManager));
-
-        // SAVE AS - Ctrl+Shift+S
         manager.register(ShortcutManager.SAVE_AS_FILE, () -> fileManager.saveFileAs(tabManager));
-
-        // EXIT - Ctrl+Q
         manager.register(ShortcutManager.EXIT_APP, Platform::exit);
+
+        // Ctrl+F to open search bar
+        manager.register(KeyCombination.valueOf("Ctrl+F"), () -> {
+            searchBar.setVisible(true);
+            searchBar.focusField();
+        });
 
         manager.attachTo(scene);
     }
@@ -114,7 +127,7 @@ public class TextEditorWindow {
     private void addToClipboardHistory(String text) {
         clipboardHistory.add(0, text);
         if (clipboardHistory.size() > 50) {
-            clipboardHistory.remove(clipboardHistory.size() - 1); // Keep max 50 items
+            clipboardHistory.remove(clipboardHistory.size() - 1);
         }
     }
 
@@ -141,12 +154,10 @@ public class TextEditorWindow {
     }
 
     private void setupTracking() {
-        // Initial caret tracking
         if (tabManager.getCurrentCodeArea() != null) {
             bindCodeArea(tabManager.getCurrentCodeArea(), tabManager.getTabPane().getSelectionModel().getSelectedItem());
         }
 
-        // Track on tab switch
         tabManager.getTabPane().getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             CodeArea newArea = tabManager.getCurrentCodeArea();
             if (newArea != null) {
@@ -157,6 +168,9 @@ public class TextEditorWindow {
     }
 
     private void bindCodeArea(CodeArea codeArea, Tab tab) {
+        AutoStyler styler = new AutoStyler();
+        styler.bindTo(codeArea);
+
         codeArea.caretPositionProperty().addListener((obs, oldVal, newVal) -> updateStatusBar(codeArea));
     }
 

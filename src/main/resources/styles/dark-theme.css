@@ -105,3 +105,31 @@
     -fx-shape: " ";
     -fx-background-color: transparent;
 }
+
+.styled-text-area .note-title {
+    -fx-fill: #CBA6F7;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.styled-text-area .main-header {
+    -fx-fill: #F5C2E7;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Segoe UI Semibold";
+}
+
+.styled-text-area .list-item {
+    -fx-fill: #94E2D5;
+    -fx-font-style: italic;
+    -fx-font-size: 14px;
+}
+
+.styled-text-area .search-highlight {
+    -fx-fill: #FFB86C;
+    -fx-font-weight: bold;
+    -fx-background-color: #44475A;
+}
+
+
+
