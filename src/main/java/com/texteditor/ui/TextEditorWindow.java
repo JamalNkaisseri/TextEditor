@@ -21,6 +21,7 @@ public class TextEditorWindow {
     private FileManager fileManager;
     private final List<String> clipboardHistory = new ArrayList<>();
     private double fontSize = 14;
+    private boolean wordWrapEnabled = true; // Default to enabled
 
     private SearchBar searchBar;
     private SearchTool searchTool;
@@ -135,6 +136,9 @@ public class TextEditorWindow {
             searchBar.focusField();
         });
 
+        // Toggle word wrap with Alt+W
+        manager.register(KeyCombination.valueOf("Alt+W"), this::toggleWordWrap);
+
         manager.register(ShortcutManager.OPEN_FILE, () -> fileManager.openFile(tabManager));
 
         manager.attachTo(scene);
@@ -169,6 +173,48 @@ public class TextEditorWindow {
         }
     }
 
+    /**
+     * Toggles word wrap for the current code area
+     */
+    private void toggleWordWrap() {
+        wordWrapEnabled = !wordWrapEnabled;
+        CodeArea area = tabManager.getCurrentCodeArea();
+        if (area != null) {
+            applyWordWrap(area);
+        }
+
+        // Update status bar to show word wrap status
+        updateStatusBarWithWordWrap();
+    }
+
+    /**
+     * Applies word wrap setting to a code area
+     */
+    private void applyWordWrap(CodeArea codeArea) {
+        if (codeArea != null) {
+            codeArea.setWrapText(wordWrapEnabled);
+        }
+    }
+
+    /**
+     * Gets the current word wrap state
+     */
+    public boolean isWordWrapEnabled() {
+        return wordWrapEnabled;
+    }
+
+    /**
+     * Sets word wrap state programmatically
+     */
+    public void setWordWrapEnabled(boolean enabled) {
+        this.wordWrapEnabled = enabled;
+        CodeArea area = tabManager.getCurrentCodeArea();
+        if (area != null) {
+            applyWordWrap(area);
+        }
+        updateStatusBarWithWordWrap();
+    }
+
     private void updateSearchTool() {
         CodeArea codeArea = tabManager.getCurrentCodeArea();
         if (codeArea != null) {
@@ -190,6 +236,7 @@ public class TextEditorWindow {
                 updateStatusBar(newArea);
                 updateSearchTool(); // Update search tool for new tab
                 applyFontSize(newArea); // Apply current font size to new tab
+                applyWordWrap(newArea); // Apply word wrap to new tab
             }
         });
 
@@ -198,11 +245,12 @@ public class TextEditorWindow {
             while (change.next()) {
                 if (change.wasAdded()) {
                     for (Tab addedTab : change.getAddedSubList()) {
-                        // Apply font size to newly created tabs
+                        // Apply font size and word wrap to newly created tabs
                         Platform.runLater(() -> {
                             CodeArea area = tabManager.getCurrentCodeArea();
                             if (area != null && tabManager.getTabPane().getSelectionModel().getSelectedItem() == addedTab) {
                                 applyFontSize(area);
+                                applyWordWrap(area);
                             }
                         });
                     }
@@ -217,8 +265,9 @@ public class TextEditorWindow {
 
         codeArea.caretPositionProperty().addListener((obs, oldVal, newVal) -> updateStatusBar(codeArea));
 
-        // Apply current font size to this code area
+        // Apply current font size and word wrap to this code area
         applyFontSize(codeArea);
+        applyWordWrap(codeArea);
     }
 
     private void applyFontSize(CodeArea codeArea) {
@@ -231,7 +280,15 @@ public class TextEditorWindow {
         if (codeArea != null) {
             int line = codeArea.getCurrentParagraph() + 1;
             int column = codeArea.getCaretColumn() + 1;
-            statusLabel.setText("Line: " + line + ", Column: " + column);
+            String wrapStatus = wordWrapEnabled ? " | Word Wrap: ON" : " | Word Wrap: OFF";
+            statusLabel.setText("Line: " + line + ", Column: " + column + wrapStatus);
+        }
+    }
+
+    private void updateStatusBarWithWordWrap() {
+        CodeArea codeArea = tabManager.getCurrentCodeArea();
+        if (codeArea != null) {
+            updateStatusBar(codeArea);
         }
     }
 
