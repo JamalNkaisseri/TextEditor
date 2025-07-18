@@ -16,12 +16,8 @@
     </properties>
 
     <dependencies>
-<<<<<<< HEAD
 
         <!-- JavaFX Modules -->
-=======
-        <!-- JavaFX -->
->>>>>>> 7500b13cdb2c67f29b35110b73620aef84c189b2
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -43,10 +39,6 @@
             <version>${javafx.version}</version>
         </dependency>
 
-<<<<<<< HEAD
-=======
-        <!-- ✅ Add RichTextFX -->
->>>>>>> 7500b13cdb2c67f29b35110b73620aef84c189b2
         <dependency>
             <groupId>org.fxmisc.richtext</groupId>
             <artifactId>richtextfx</artifactId>
@@ -56,10 +48,6 @@
 
     <build>
         <plugins>
-<<<<<<< HEAD
-=======
-            <!-- JavaFX plugin -->
->>>>>>> 7500b13cdb2c67f29b35110b73620aef84c189b2
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -69,10 +57,6 @@
                 </configuration>
             </plugin>
 
-<<<<<<< HEAD
-=======
-            <!-- Shaded fat JAR plugin -->
->>>>>>> 7500b13cdb2c67f29b35110b73620aef84c189b2
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -96,8 +80,4 @@
             </plugin>
         </plugins>
     </build>
-<<<<<<< HEAD
 </project>
-=======
-</project>
->>>>>>> 7500b13cdb2c67f29b35110b73620aef84c189b2
