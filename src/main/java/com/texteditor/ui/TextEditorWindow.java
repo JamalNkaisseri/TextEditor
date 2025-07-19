@@ -1,5 +1,7 @@
 package com.texteditor.ui;
 
+import javafx.application.Application;
+import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -25,6 +27,27 @@ public class TextEditorWindow {
 
     private SearchBar searchBar;
     private SearchTool searchTool;
+
+    // Link handling
+    private LinkHandler linkHandler;
+    private HostServices hostServices;
+
+    // Constructor that accepts HostServices
+    public TextEditorWindow(HostServices hostServices) {
+        this.hostServices = hostServices;
+        this.linkHandler = new LinkHandler(hostServices);
+    }
+
+    // Default constructor for backward compatibility
+    public TextEditorWindow() {
+        this.linkHandler = new LinkHandler(null);
+    }
+
+    // Setter method to provide HostServices later
+    public void setHostServices(HostServices hostServices) {
+        this.hostServices = hostServices;
+        this.linkHandler = new LinkHandler(hostServices);
+    }
 
     public void start(Stage stage) {
         BorderPane root = new BorderPane();
@@ -237,6 +260,9 @@ public class TextEditorWindow {
                 updateSearchTool(); // Update search tool for new tab
                 applyFontSize(newArea); // Apply current font size to new tab
                 applyWordWrap(newArea); // Apply word wrap to new tab
+
+                // Bind link handler to new tab
+                linkHandler.bindTo(newArea);
             }
         });
 
@@ -245,12 +271,13 @@ public class TextEditorWindow {
             while (change.next()) {
                 if (change.wasAdded()) {
                     for (Tab addedTab : change.getAddedSubList()) {
-                        // Apply font size and word wrap to newly created tabs
+                        // Apply font size, word wrap, and link handling to newly created tabs
                         Platform.runLater(() -> {
                             CodeArea area = tabManager.getCurrentCodeArea();
                             if (area != null && tabManager.getTabPane().getSelectionModel().getSelectedItem() == addedTab) {
                                 applyFontSize(area);
                                 applyWordWrap(area);
+                                linkHandler.bindTo(area);
                             }
                         });
                     }
@@ -265,9 +292,12 @@ public class TextEditorWindow {
 
         codeArea.caretPositionProperty().addListener((obs, oldVal, newVal) -> updateStatusBar(codeArea));
 
-        // Apply current font size and word wrap to this code area
+        // Apply current font size, word wrap, and link handling to this code area
         applyFontSize(codeArea);
         applyWordWrap(codeArea);
+
+        // Bind link handler
+        linkHandler.bindTo(codeArea);
     }
 
     private void applyFontSize(CodeArea codeArea) {
@@ -351,5 +381,13 @@ public class TextEditorWindow {
 
         // All tabs processed successfully
         return true;
+    }
+
+    /**
+     * Gets the link handler instance for additional configuration
+     * @return The LinkHandler instance
+     */
+    public LinkHandler getLinkHandler() {
+        return linkHandler;
     }
 }

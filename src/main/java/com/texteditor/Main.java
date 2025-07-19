@@ -6,11 +6,14 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
-    public void start(Stage stage){
-        new TextEditorWindow().start(stage);
+    @Override
+    public void start(Stage stage) {
+        // Create TextEditorWindow with HostServices to enable link clicking
+        TextEditorWindow editor = new TextEditorWindow(getHostServices());
+        editor.start(stage);
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         launch(args);
     }
 }
