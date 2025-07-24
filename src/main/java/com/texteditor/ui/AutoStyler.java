@@ -10,11 +10,19 @@ public class AutoStyler {
 
     private static final Pattern MAIN_HEADER = Pattern.compile("^[A-Z].+:\\s*$");
     private static final Pattern TITLE_LINE = Pattern.compile("^[A-Z][^:]+$");
-    // Fixed: More flexible list item pattern
     private static final Pattern LIST_ITEM = Pattern.compile("^\\s*[a-z]\\)\\s*.*");
 
     private static final long DEBOUNCE_DELAY_MS = 300;
     private Timer debounceTimer;
+    private LinkHandler linkHandler; // Reference to link handler
+
+    /**
+     * Sets the link handler for coordinated styling
+     * @param linkHandler The LinkHandler instance to coordinate with
+     */
+    public void setLinkHandler(LinkHandler linkHandler) {
+        this.linkHandler = linkHandler;
+    }
 
     public void bindTo(CodeArea codeArea) {
         // Initial style application
@@ -58,6 +66,11 @@ public class AutoStyler {
             }
 
             index += line.length() + 1;
+        }
+
+        // Apply link styling after other styles
+        if (linkHandler != null) {
+            linkHandler.applyLinkStyling();
         }
     }
 }

@@ -131,5 +131,56 @@
     -fx-background-color: #44475A;
 }
 
+/* Link styling - try multiple properties to ensure it works */
+.link {
+    -fx-fill: #4A9EFF !important; /* Bright blue for links */
+    -fx-text-fill: #4A9EFF !important; /* Alternative text color property */
+    -fx-underline: true;
+    -fx-font-weight: normal;
+}
 
+/* More specific selector for CodeArea links */
+.code-area .link {
+    -fx-fill: #4A9EFF !important;
+    -fx-text-fill: #4A9EFF !important;
+    -fx-underline: true;
+}
+
+/* Even more specific selector */
+.code-area .text .link {
+    -fx-fill: #4A9EFF !important;
+    -fx-text-fill: #4A9EFF !important;
+    -fx-underline: true;
+}
+
+/* Alternative link colors you can use */
+.link-blue {
+    -fx-fill: #4A9EFF !important;
+    -fx-text-fill: #4A9EFF !important;
+    -fx-underline: true;
+}
+
+.link-cyan {
+    -fx-fill: #00BFFF !important;
+    -fx-text-fill: #00BFFF !important;
+    -fx-underline: true;
+}
+
+.link-purple {
+    -fx-fill: #DA70D6 !important;
+    -fx-text-fill: #DA70D6 !important;
+    -fx-underline: true;
+}
+
+.link-green {
+    -fx-fill: #32CD32 !important;
+    -fx-text-fill: #32CD32 !important;
+    -fx-underline: true;
+}
+
+.link-orange {
+    -fx-fill: #FF8C00 !important;
+    -fx-text-fill: #FF8C00 !important;
+    -fx-underline: true;
+}
 

@@ -7,6 +7,7 @@ import org.fxmisc.richtext.CodeArea;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Collections;
 
 /**
  * Handles clickable links in the text editor
@@ -25,8 +26,6 @@ public class LinkHandler {
             "\\b(?:(?:https?|ftp)://|www\\.)[\\w\\-._~:/?\\[\\]@!$&'()*+,;=%]+",
             Pattern.CASE_INSENSITIVE
     );
-
-
 
     private final HostServices hostServices;
     private CodeArea codeArea;
@@ -48,6 +47,7 @@ public class LinkHandler {
     public void bindTo(CodeArea codeArea) {
         this.codeArea = codeArea;
         setupMouseHandlers();
+        applyLinkStyling(); // Apply initial styling
     }
 
     /**
@@ -56,6 +56,28 @@ public class LinkHandler {
      */
     public void setExtendedPattern(boolean extended) {
         this.useExtendedPattern = extended;
+        if (codeArea != null) {
+            applyLinkStyling(); // Reapply styling with new pattern
+        }
+    }
+
+    /**
+     * Applies link styling to all URLs in the text
+     */
+    public void applyLinkStyling() {
+        if (codeArea == null) return;
+
+        String text = codeArea.getText();
+        Pattern pattern = useExtendedPattern ? EXTENDED_URL_PATTERN : URL_PATTERN;
+        Matcher matcher = pattern.matcher(text);
+
+        while (matcher.find()) {
+            int start = matcher.start();
+            int end = matcher.end();
+
+            // Apply link styling to this URL - using Collections.singleton for single style
+            codeArea.setStyle(start, end, Collections.singleton("link"));
+        }
     }
 
     /**

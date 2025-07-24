@@ -288,6 +288,9 @@ public class TextEditorWindow {
 
     private void bindCodeArea(CodeArea codeArea, Tab tab) {
         AutoStyler styler = new AutoStyler();
+
+        // Set up coordination between AutoStyler and LinkHandler
+        styler.setLinkHandler(linkHandler);
         styler.bindTo(codeArea);
 
         codeArea.caretPositionProperty().addListener((obs, oldVal, newVal) -> updateStatusBar(codeArea));
