@@ -9,7 +9,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.fxmisc.richtext.CodeArea;
 
 import java.util.ArrayList;
@@ -67,6 +69,12 @@ public class TextEditorWindow {
         // Scene setup
         Scene scene = new Scene(root, 800, 600);
         scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/dark-theme.css")).toExternalForm());
+
+        // Make window transparent
+        stage.initStyle(StageStyle.TRANSPARENT); // Remove window decorations if desired
+        scene.setFill(Color.TRANSPARENT); // Make scene background transparent
+        root.setStyle(ThemeManager.ROOT_TRANSPARENT_STYLE); // Semi-transparent background
+
 
         // Tab and file managers - Fixed parameter order
         fileManager = new FileManager(stage);

@@ -184,3 +184,15 @@
     -fx-underline: true;
 }
 
+.root {
+    -fx-background-color: rgba(30, 30, 46, 0.9); /* Semi-transparent */
+}
+
+.styled-text-area {
+    -fx-background-color: rgba(30, 30, 46, 0.8); /* More transparent for text area */
+}
+
+.tab-pane {
+    -fx-background-color: rgba(30, 30, 46, 0.9);
+}
+
