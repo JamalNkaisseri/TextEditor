@@ -34,6 +34,9 @@ public class TextEditorWindow {
     private LinkHandler linkHandler;
     private HostServices hostServices;
 
+    private double xOffset = 0;
+    private double yOffset = 0;
+
     // Constructor that accepts HostServices
     public TextEditorWindow(HostServices hostServices) {
         this.hostServices = hostServices;
@@ -65,6 +68,18 @@ public class TextEditorWindow {
                         "-fx-border-color: #3D3D4D;"
         );
         root.setBottom(statusLabel);
+
+
+        // Make the root pane draggable
+        root.setOnMousePressed(event -> {
+            xOffset = event.getSceneX();
+            yOffset = event.getSceneY();
+        });
+
+        root.setOnMouseDragged(event -> {
+            stage.setX(event.getScreenX() - xOffset);
+            stage.setY(event.getScreenY() - yOffset);
+        });
 
         // Scene setup
         Scene scene = new Scene(root, 800, 600);
