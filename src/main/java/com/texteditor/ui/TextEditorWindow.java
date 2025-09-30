@@ -324,6 +324,9 @@ public class TextEditorWindow {
 
         // Bind link handler
         linkHandler.bindTo(codeArea);
+
+        // Add auto-closing brackets functionality
+        setupAutoClosingBrackets(codeArea);
     }
 
     private void applyFontSize(CodeArea codeArea) {
@@ -415,5 +418,51 @@ public class TextEditorWindow {
      */
     public LinkHandler getLinkHandler() {
         return linkHandler;
+    }
+
+    /**
+     * Sets up auto-closing brackets for the code area
+     * When user types an opening bracket, automatically insert the closing bracket
+     */
+    private void setupAutoClosingBrackets(CodeArea codeArea) {
+        codeArea.setOnKeyTyped(event -> {
+            String character = event.getCharacter();
+
+            // Check if the typed character is an opening bracket
+            String closingBracket = getClosingBracket(character);
+
+            if (closingBracket != null) {
+                // Get current caret position
+                int caretPosition = codeArea.getCaretPosition();
+
+                // Insert the closing bracket
+                codeArea.insertText(caretPosition, closingBracket);
+
+                // Move caret back between the brackets
+                codeArea.moveTo(caretPosition);
+            }
+        });
+    }
+
+    /**
+     * Returns the matching closing bracket for an opening bracket
+     * @param openingBracket The opening bracket character
+     * @return The matching closing bracket, or null if not a bracket
+     */
+    private String getClosingBracket(String openingBracket) {
+        switch (openingBracket) {
+            case "(":
+                return ")";
+            case "{":
+                return "}";
+            case "[":
+                return "]";
+            case "\"":
+                return "\"";
+            case "'":
+                return "'";
+            default:
+                return null;
+        }
     }
 }
